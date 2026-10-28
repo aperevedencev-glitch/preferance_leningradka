@@ -414,7 +414,8 @@ function renderSetup() {
     <details><summary>Ставки и правила</summary><div class="rules">
       ${[["whistMult","Вист за взятку, × стоимость"],["goraMult","Гора за недобор, × стоимость"],["consolationMult","Консоляция, × стоимость"],["whistPenaltyMult","Недобор на висте, × стоимость"],["misere","Мизер в пулю"],["misereGoraPerTrick","Мизер: гора за взятку"],["raspasBase","Распасы: гора за взятку"],["raspasMaxStep","Распасы: ступеней прогрессии"],["poolToGora","Очко пули = очков горы"],["whistPerGora","Очко горы = вистов"]]
         .map(([k,t]) => `<label class="f">${t}<input type="number" step="1" id="r-${k}" value="${R[k]}"></label>`).join("")}
-    </div><p class="sub">Стоимость игр: 6 — 2, 7 — 4, 8 — 6, 9 — 8, 10 — 10. Полвиста — на 6-х и 7-х играх.</p></details>
+    </div><label class="f" style="flex-direction:row;align-items:center;gap:8px;margin-top:8px"><input type="checkbox" id="r-stalingrad" ${R.stalingrad !== false ? "checked" : ""} style="width:auto"> Сталинград: на 6♠ вистуют оба</label>
+    <p class="sub">Стоимость игр: 6 — 2, 7 — 4, 8 — 6, 9 — 8, 10 — 10. Полвиста — на 6-х и 7-х играх.</p></details>
     <button class="btn" id="start" type="button" style="margin-top:12px">Начать</button>
     <datalist id="known">${known.map((k) => `<option value="${esc(k)}">`).join("")}</datalist>
   </div>
@@ -428,6 +429,7 @@ function renderSetup() {
     if (new Set(list).size !== list.length) return alertBox("Имена игроков должны отличаться");
     const rules = { poolTarget: Math.max(2, +$("#target").value || R.poolTarget) };
     for (const k of ["whistMult","goraMult","consolationMult","whistPenaltyMult","misere","misereGoraPerTrick","raspasBase","raspasMaxStep","poolToGora","whistPerGora"]) rules[k] = +$("#r-" + k).value;
+    rules.stalingrad = $("#r-stalingrad").checked;
     S.pulka = PREF.newPulka(list, rules);
     save(); render();
   };
