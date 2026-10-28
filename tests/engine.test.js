@@ -47,3 +47,14 @@ const r={}; P.updateRatings(r,s); console.log(s, r); console.log('ok');
   P2.apply(q, game('7♠')); A.strictEqual(q.raspasStep, 0); A.strictEqual(P2.exitLevel(q), 6);
   console.log('exit ok');
 }
+
+// распасы вчетвером: взятки сдающего из прикупа — только гора, без премии за ноль
+{
+  const P3 = require('../src/engine.js'); const A = require('assert');
+  const q = P3.newPulka(['А','Б','В','Г']); q.dealer = 0; // играют 1,2,3
+  let d = P3.score(q, { type: 'raspas', tricks: { 1: 4, 2: 0, 3: 5, 0: 1 } });
+  A.strictEqual(d.gora[0], 2); A.strictEqual(d.pool[0], 0); A.strictEqual(d.pool[2], 1);
+  d = P3.score(q, { type: 'raspas', tricks: { 1: 4, 2: 1, 3: 5 } });
+  A.strictEqual(d.gora[0] + d.pool[0], 0);
+  console.log('raspas4 ok');
+}

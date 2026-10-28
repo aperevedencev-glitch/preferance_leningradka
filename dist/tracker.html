@@ -182,7 +182,9 @@ const PREF = (() => {
     if (h.type === "raspas") {
       d.raspasStep = nextRaspas(p);
       const step = Math.min(d.raspasStep, R.raspasMaxStep);
+      const act = activeOrder(p);
       for (const [i, t] of Object.entries(h.tricks)) {
+        if (!act.includes(Number(i)) && !(t > 0)) continue; // сдающий вчетвером: только гора за взятки из прикупа
         if (t > 0) { d.gora[i] += t * R.raspasBase * step; d.notes.push(`${name(i)}: ${t} взят. на распасах → гора +${t * R.raspasBase * step}`); }
         else if (R.raspasZeroBonus) { d.pool[i] += R.raspasZeroBonus * step; d.notes.push(`${name(i)}: ни одной взятки → пуля +${R.raspasZeroBonus * step}`); }
       }
@@ -351,14 +353,20 @@ const PREF = (() => {
     }).join("");
     return `<h2>Правила распасов</h2>
 <ol class="rr">
-  <li><b>Когда.</b> Если в торговле спасовали все трое, сдача играется на распасах.${" "}Вчетвером сдающий не играет.</li>
-  <li><b>Как играть.</b> Каждый играет сам за себя и старается взять как можно меньше взяток. Козыря нет: ходят в масть, а если масти нет — любой картой. Прикуп в розыгрыше не участвует.</li>
-  <li><b>Запись.</b> Каждая взятка пишется в гору по ${base} × ступень распасов. Кто не взял ни одной взятки, получает ${R.raspasZeroBonus} × ступень в пулю.</li>
+  <li><b>Когда.</b> Если в торговле спасовали все трое, сдача играется на распасах. Вчетвером сдающий не получает карт и не торгуется.</li>
+  <li><b>Как играть.</b> Каждый играет сам за себя и старается взять как можно меньше взяток. Козыря нет: ходят в масть, а если масти нет — любой картой.</li>
+  <li><b>Ходы из прикупа.</b> Первые две взятки играются «из прикупа»: карты прикупа открывают по одной, каждая задаёт масть своей взятки. Первым бьёт игрок, сидящий после сдающего, за ним остальные по кругу; масть прикупа обязательна, если она есть на руке.
+    <ul>
+      <li><b>Втроём</b> карта прикупа только показывает масть: взятку берёт старшая карта этой масти у игроков.</li>
+      <li><b>Вчетвером</b> карта прикупа — карта сдающего во взятке. Если она старше карт игроков, взятка пишется сдающему (в гору, как обычная взятка на распасах).</li>
+    </ul>
+    С третьей взятки ходит тот, кто взял вторую; если её взял сдающий — игрок после него.</li>
+  <li><b>Запись.</b> Каждая взятка пишется в гору по ${base} × ступень распасов. Игрок, не взявший ни одной взятки, получает ${R.raspasZeroBonus} × ступень в пулю (сдающему вчетвером эта премия не положена).</li>
   <li><b>Ступень</b> — какие по счёту распасы подряд: первые — ${g(1)} за взятку, вторые — ${g(2)}, третьи — ${g(3)}${mx < 3 ? " (прогрессия ограничена " + mx + "-й ступенью)" : ""}.</li>
   <li><b>Выход из распасов.</b> В сдаче после распасов играть можно только игру не ниже указанной в таблице. Торговля начинается с этой игры; ниже заявить и записать нельзя.</li>
 </ol>
 <div class="tw rt"><table><thead><tr><th>Ситуация</th><th class="n">Гора за взятку</th><th class="n">Следующая игра не ниже</th></tr></thead><tbody>${exRows.join("")}</tbody></table></div>
-<ol class="rr" start="6">
+<ol class="rr" start="7">
   <li><b>Сброс счёта.</b> После сыгранной игры или мизера счёт распасов обнуляется. После ${ord[cyc - 1] || cyc + "-х"} распасов подряд выход автоматический — обычная торговля с 6-й, а если и эта сдача уйдёт в распасы, они снова считаются первыми.</li>
   <li><b>Мизер</b> можно заявить при любом выходе: по старшинству он выше любой 8-й игры.</li>
   <li>Если при выходе все снова спасуют — снова распасы, и счёт распасов подряд продолжается.</li>
@@ -498,8 +506,9 @@ function renderForm() {
   const p = S.pulka, act = PREF.activeOrder(p), nm = (i) => p.players[i].name, R = p.rules;
   let html = "";
   if (F.type === "raspas") {
-    act.forEach((i) => { if (F.ras[i] === undefined) F.ras[i] = 0; });
-    html = `<div class="row2" style="grid-template-columns:repeat(3,1fr)">${act.map((i) => `<label class="f">${esc(nm(i))}<input type="number" min="0" max="10" id="ras${i}" value="${F.ras[i]}"></label>`).join("")}</div><p class="sub">Взяток на распасах, в сумме 10. Ступень прогрессии: ${Math.min(PREF.nextRaspas(p), R.raspasMaxStep)} (по ${R.raspasBase * Math.min(PREF.nextRaspas(p), R.raspasMaxStep)} в гору за взятку).</p>`;
+    const seats = p.players.length === 4 ? [...act, p.dealer] : act;
+    seats.forEach((i) => { if (F.ras[i] === undefined) F.ras[i] = 0; });
+    html = `<div class="row2" style="grid-template-columns:repeat(${seats.length},minmax(0,1fr))">${seats.map((i) => `<label class="f">${esc(nm(i))}${i === p.dealer && p.players.length === 4 ? " (сдаёт)" : ""}<input type="number" min="0" max="${i === p.dealer && p.players.length === 4 ? 2 : 10}" id="ras${i}" value="${F.ras[i]}"></label>`).join("")}</div><p class="sub">Взяток на распасах, в сумме 10.${p.players.length === 4 ? " Сдающему пишутся взятки, взятые картой прикупа на первых двух ходах (0–2)." : ""} Ступень прогрессии: ${Math.min(PREF.nextRaspas(p), R.raspasMaxStep)} (по ${R.raspasBase * Math.min(PREF.nextRaspas(p), R.raspasMaxStep)} в гору за взятку).</p>`;
   } else {
     html = `<label class="f">Играющий<select id="decl">${opts(act.map((i) => [i, nm(i)]), F.declarer)}</select></label>`;
     if (F.type === "misere") {
@@ -543,6 +552,7 @@ function buildHand() {
   if (F.type === "raspas") {
     const t = {}; let sum = 0;
     for (const i of PREF.activeOrder(p)) { const v = F.ras[i] | 0; if (v < 0 || v > 10) throw new Error("Взяток от 0 до 10"); t[i] = v; sum += v; }
+    if (p.players.length === 4) { const v = F.ras[p.dealer] | 0; if (v < 0 || v > 2) throw new Error("У сдающего — от 0 до 2 взяток (только ходы из прикупа)"); if (v) { t[p.dealer] = v; sum += v; } }
     if (sum !== 10) throw new Error(`Сумма взяток на распасах — ${sum}, должно быть 10`);
     return { type: "raspas", tricks: t };
   }

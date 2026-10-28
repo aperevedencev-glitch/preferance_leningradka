@@ -160,13 +160,23 @@ const CARDS = (() => {
       const longest = Object.keys(counts).sort((a, b) => counts[b] - counts[a])[0];
       return opts.filter((c) => c.s === longest)[0];
     }
-    const cur = winner(trick, trump);
-    const curCard = trick.find((x) => x.who === cur).card;
+    // втроём на распасах карта прикупа (who = -1) задаёт масть, но взятку не берёт
+    let cur, curCard;
+    if (trick[0].who === -1) {
+      const lead = trick[0].card.s;
+      const real = trick.filter((x) => x.who !== -1 && x.card.s === lead).sort((a, b) => b.card.v - a.card.v);
+      if (!real.length) return low; // масть ещё никто не положил — кладём младшую
+      cur = real[0].who; curCard = real[0].card;
+    } else {
+      cur = winner(trick, trump);
+      curCard = trick.find((x) => x.who === cur).card;
+    }
     const beats = (c) => (c.s === curCard.s ? c.v > curCard.v : trump && c.s === trump && curCard.s !== trump);
     if (avoid) {
       // самая старшая карта, которая не берёт; если не выходит — самая младшая
       const under = opts.filter((c) => !beats(c));
-      return under.length ? under[under.length - 1] : (trick.length === 2 ? high : low);
+      const last = trick.filter((x) => !(x.pk && x.who === -1)).length === (trick.some((x) => x.pk && x.who !== -1) ? 3 : 2);
+      return under.length ? under[under.length - 1] : (last ? high : low);
     }
     if (role === "catch") {
       // заставить играющего взять: класть младшие, не перебивая его

@@ -220,6 +220,28 @@ function startPlay() {
   const d = G.d;
   d.phase = "play"; d.trick = []; d.turn = G.d.act.indexOf(d.lead);
   d.trump = d.raspas || d.contract === "мизер" ? null : PREF.trumpOf(d.contract);
+  if (d.raspas) {
+    // распасы: первые две взятки — «из прикупа», первым бьёт игрок после сдающего
+    d.prk = 0; d.turn = 0;
+    if (d.act.length < G.pulka.players.length) d.tricks[d.dealer] = 0; // вчетвером сдающий берёт взятки картой прикупа
+    beginPrikupTrick();
+  }
+}
+
+// вчетвером карта прикупа — настоящая карта сдающего во взятке; втроём она только задаёт масть
+function beginPrikupTrick() {
+  const d = G.d, four = d.act.length < G.pulka.players.length, c = d.prikup[d.prk];
+  d.trick = [{ who: four ? d.dealer : -1, card: c, pk: true }];
+  addLog(`Ход из прикупа: ${c.r}${c.s}${four ? " (за сдающего)" : " — масть взятки"}`);
+}
+
+function trickWinner(tr, trump) {
+  if (!tr.some((x) => x.pk)) return CARDS.winner(tr, trump);
+  // распасы из прикупа: старшая карта масти прикупа; втроём карта прикупа взятку не берёт
+  const lead = tr[0].card.s;
+  let best = null;
+  for (const x of tr) if (x.who !== -1 && x.card.s === lead && (!best || x.card.v > best.card.v)) best = x;
+  return best.who;
 }
 
 function roleOf(seat) {
@@ -234,8 +256,8 @@ function playCard(seat, card) {
   const d = G.d;
   d.hands[seat] = d.hands[seat].filter((c) => c !== card);
   d.trick.push({ who: seat, card });
-  if (d.trick.length === 3) {
-    const w = CARDS.winner(d.trick, d.trump);
+  if (d.trick.filter((x) => !x.pk).length === 3) {
+    const w = trickWinner(d.trick, d.trump);
     d.tricks[w]++;
     d.lastTrick = { cards: d.trick, winner: w };
     d.pause = true;
@@ -247,6 +269,11 @@ function afterTrick() {
   const d = G.d;
   d.pause = false; d.trick = [];
   d.turn = d.act.indexOf(d.trickWinner);
+  if (d.raspas && d.prk !== undefined && d.prk < 2) {
+    d.prk++;
+    if (d.prk < 2) { d.turn = 0; beginPrikupTrick(); }
+    else if (d.turn < 0) d.turn = 0; // взятку взял сдающий — ходит игрок после него
+  }
   if (d.act.every((s) => d.hands[s].length === 0)) finishDeal();
 }
 
@@ -329,7 +356,7 @@ function draw() {
     const cards = !inDeal ? '<span class="sub" style="color:#cfe">не играет</span>' : showAll && d.hands[s].length ? `<div class="hand" style="justify-content:flex-start">${d.hands[s].map((c) => cardHTML(c)).join("")}</div>` : `<div class="backs">${d.hands[s].map(() => '<div class="back"></div>').join("")}</div>`;
     return `<div class="opp"><div class="seat">${esc(nm(s))} ${tags}</div>${cards}</div>`;
   };
-  const trickSlots = (d.pause && d.lastTrick ? d.lastTrick.cards : d.trick).map((x) => `<div class="slot">${cardHTML(x.card)}<span>${esc(nm(x.who))}</span></div>`).join("");
+  const trickSlots = (d.pause && d.lastTrick ? d.lastTrick.cards : d.trick).map((x) => `<div class="slot">${cardHTML(x.card)}<span>${x.pk ? (x.who === -1 ? "прикуп" : "прикуп · " + esc(nm(x.who))) : esc(nm(x.who))}</span></div>`).join("");
   const me = G.human, inDealMe = d.act.includes(me);
   // какие мои карты активны
   let okIds = [];

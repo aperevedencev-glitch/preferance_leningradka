@@ -8,7 +8,9 @@ await p.evaluate(()=>{window.__fast=true});
 if(n===4) await p.click('#n4');
 await p.selectOption('#target','10');
 await p.click('#go');
-await p.evaluate(()=>{G.auto=true;BOT_DELAY=0;});
+await p.evaluate(()=>{G.auto=true;BOT_DELAY=0;
+  // проверка распасов: 10 взяток, вчетвером сдающий — только из первых двух ходов
+  window.__ras=[];const orig=PREF.apply;PREF.apply=(pk,h)=>{if(h.type==='raspas'){const s=Object.values(h.tricks).reduce((a,b)=>a+b,0);const act=PREF.activeOrder(pk);const dl=Object.keys(h.tricks).map(Number).filter(i=>!act.includes(i));window.__ras.push({s,dealerT:dl.map(i=>h.tricks[i])});if(s!==10||dl.some(i=>h.tricks[i]>2))throw new Error('raspas tricks '+JSON.stringify(h.tricks));}return orig(pk,h);};});
 await p.evaluate(()=>loop());
 let deals=0, types={};
 for(let i=0;i<200;i++){
@@ -21,6 +23,6 @@ for(let i=0;i<200;i++){
 }
 await p.screenshot({path:`g${n}.png`});
 console.log(n,'deals',deals,JSON.stringify(types),'closed',await p.evaluate(()=>G.pulka.closed),errs.join('|')||'no errors');
-console.log(await p.evaluate(()=>JSON.stringify(G.final)));
+console.log('raspas checked',await p.evaluate(()=>JSON.stringify({n:__ras.length,dealerTricks:__ras.reduce((a,r)=>a+(r.dealerT[0]||0),0)})));
 }
 await b.close()})()
