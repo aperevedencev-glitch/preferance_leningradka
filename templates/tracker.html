@@ -113,7 +113,7 @@ function renderSetup() {
     <h2>Новая пулька</h2>
     <div class="seg" role="group" aria-label="Игроков"><button type="button" id="n3" data-n="3" aria-pressed="true">3 игрока</button><button type="button" id="n4" data-n="4" aria-pressed="false">4 игрока</button></div>
     <div id="names"></div>
-    <label class="f">Пуля каждому, очков<input id="target" type="number" min="4" step="2" value="${R.poolTarget}"></label>
+    <label class="f">Пуля каждому, очков<select id="target">${[10, 20, 30, 40, 50, 60].map((v) => `<option value="${v}" ${v === R.poolTarget ? "selected" : ""}>${v}</option>`).join("")}</select></label>
     <details><summary>Ставки и правила</summary><div class="rules">
       ${[["whistMult","Вист за взятку, × стоимость"],["goraMult","Гора за недобор, × стоимость"],["consolationMult","Консоляция, × стоимость"],["whistPenaltyMult","Недобор на висте, × стоимость"],["misere","Мизер в пулю"],["misereGoraPerTrick","Мизер: гора за взятку"],["raspasBase","Распасы: гора за взятку"],["raspasMaxStep","Распасы: ступеней прогрессии"],["poolToGora","Очко пули = очков горы"],["whistPerGora","Очко горы = вистов"]]
         .map(([k,t]) => `<label class="f">${t}<input type="number" step="1" id="r-${k}" value="${R[k]}"></label>`).join("")}

@@ -109,7 +109,7 @@ function setupView() {
   $("#view").innerHTML = `<div class="layout"><div class="panel"><h2>Новая пулька</h2>
     <label class="f">Ваше имя<input id="me" value="${esc(st.name)}"></label>
     <div class="seg" role="group" aria-label="Игроков"><button type="button" id="n3" data-n="3" aria-pressed="${st.n === 3}">Втроём</button><button type="button" id="n4" data-n="4" aria-pressed="${st.n === 4}">Вчетвером</button></div>
-    <label class="f">Пуля каждому<select id="target">${[10, 20, 30].map((v) => `<option ${v === st.target ? "selected" : ""}>${v}</option>`).join("")}</select></label>
+    <label class="f">Пуля каждому<select id="target">${[10, 20, 30, 40, 50, 60].map((v) => `<option ${v === st.target ? "selected" : ""}>${v}</option>`).join("")}</select></label>
     <button type="button" class="b" id="go">Сесть за стол</button></div>
     <div class="panel"><h2>Как играть</h2><p>Торгуйтесь кнопками справа. Если игра ваша, возьмите прикуп, выберите две карты в снос и назначьте игру. В розыгрыше подсвечены карты, которыми можно ходить: нужно ходить в масть, без масти — козырем.</p><p class="sub">Запись ведётся по правилам Ленинградки: вист полуответственный, джентльменский, полвиста на 6-х и 7-х играх, распасы с прогрессией. Вчетвером сдающий пропускает раздачу.</p></div></div>`;
   let n = st.n;
