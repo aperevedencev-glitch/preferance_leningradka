@@ -21,6 +21,7 @@ const PREF = (() => {
     poolToGora: 2,             // очко пули = 2 очка горы при расчёте
     whistPerGora: 10,          // очко горы = 10 вистов
     poolTarget: 20,            // пуля каждому
+    stalingrad: true,          // «Сталинград»: на 6♠ вист обязателен для обоих
   };
 
   const SUITS = ["♠", "♣", "♦", "♥"];
@@ -29,6 +30,8 @@ const PREF = (() => {
   CONTRACTS.push("мизер");
   for (const l of [9, 10]) for (const s of [...SUITS, "БК"]) CONTRACTS.push(l + s);
   const contractRank = (c) => CONTRACTS.indexOf(c);
+  // «Сталинград»: на 6♠ оба защитника обязаны вистовать
+  const forcedWhist = (R, contract) => !!(R && R.stalingrad !== false && contract === "6♠");
   const levelOf = (c) => (c === "мизер" ? 0 : parseInt(c, 10));
   const trumpOf = (c) => (c === "мизер" ? null : c.replace(/^\d+/, "") === "БК" ? null : c.replace(/^\d+/, ""));
 
@@ -120,7 +123,7 @@ const PREF = (() => {
     // кто вистует
     let whisters = [];
     let halfWhist = false;
-    if (W.first === "whist" && W.second === "whist") whisters = [a, b];
+    if (forcedWhist(R, h.contract) || (W.first === "whist" && W.second === "whist")) whisters = [a, b];
     else if (W.first === "whist") whisters = [a];
     else if (W.second === "whist") whisters = [b];
     else if (W.second === "half") {
@@ -283,6 +286,6 @@ const PREF = (() => {
 <div class="tw rt"><table><thead><tr><th class="n">Сдача</th><th class="n">Игра не ниже</th><th>Исход</th><th class="n">Гора за взятку</th><th class="n">Распасов подряд</th></tr></thead><tbody>${exRow}</tbody></table></div>`;
   }
 
-  return { DEFAULT_RULES, raspasRulesHTML, SUITS, CONTRACTS, contractRank, levelOf, trumpOf, newPulka, activeOrder, defendersOf, exitLevel, nextRaspas, score, apply, undo, isFinished, settle, updateRatings };
+  return { DEFAULT_RULES, raspasRulesHTML, forcedWhist, SUITS, CONTRACTS, contractRank, levelOf, trumpOf, newPulka, activeOrder, defendersOf, exitLevel, nextRaspas, score, apply, undo, isFinished, settle, updateRatings };
 })();
 if (typeof module !== "undefined") module.exports = PREF;

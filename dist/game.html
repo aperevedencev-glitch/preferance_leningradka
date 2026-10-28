@@ -34,6 +34,12 @@ h2{font:700 24px/1.1 var(--hand);margin:0 0 8px}
 .seat{display:flex;align-items:center;gap:8px;font-weight:500;font-size:14px;flex-wrap:wrap}
 .seat .tag{font:600 11px var(--ui);background:rgba(0,0,0,.35);padding:2px 7px;border-radius:999px}
 .seat .tag.gold{background:var(--gold);color:#1F2430}
+.call{display:inline-flex;flex-wrap:wrap;gap:4px 6px;align-items:center;margin-top:6px;background:#F3F1E8;color:#1F2430;border-radius:10px;padding:4px 10px;font:600 13px var(--ui);position:relative;max-width:100%}
+.call::before{content:"";position:absolute;top:-5px;left:14px;border:5px solid transparent;border-top:0;border-bottom-color:#F3F1E8}
+.call .w{font-weight:700;color:#7A1F28}.call .w.yes{color:#1E6B4A}
+.call.now{outline:2px solid var(--gold)}
+.call .muted{font-weight:500;opacity:.65}
+.me .call{align-self:center}
 .backs{display:flex;margin-top:6px;min-height:46px}
 .back{width:30px;height:44px;border-radius:5px;background:repeating-linear-gradient(45deg,#7A1F28 0 4px,#8E2A33 4px 8px);border:2px solid #F3F1E8;margin-right:-16px;box-shadow:0 1px 2px rgba(0,0,0,.4)}
 .center{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;min-height:210px}
@@ -112,6 +118,7 @@ const PREF = (() => {
     poolToGora: 2,             // очко пули = 2 очка горы при расчёте
     whistPerGora: 10,          // очко горы = 10 вистов
     poolTarget: 20,            // пуля каждому
+    stalingrad: true,          // «Сталинград»: на 6♠ вист обязателен для обоих
   };
 
   const SUITS = ["♠", "♣", "♦", "♥"];
@@ -120,6 +127,8 @@ const PREF = (() => {
   CONTRACTS.push("мизер");
   for (const l of [9, 10]) for (const s of [...SUITS, "БК"]) CONTRACTS.push(l + s);
   const contractRank = (c) => CONTRACTS.indexOf(c);
+  // «Сталинград»: на 6♠ оба защитника обязаны вистовать
+  const forcedWhist = (R, contract) => !!(R && R.stalingrad !== false && contract === "6♠");
   const levelOf = (c) => (c === "мизер" ? 0 : parseInt(c, 10));
   const trumpOf = (c) => (c === "мизер" ? null : c.replace(/^\d+/, "") === "БК" ? null : c.replace(/^\d+/, ""));
 
@@ -211,7 +220,7 @@ const PREF = (() => {
     // кто вистует
     let whisters = [];
     let halfWhist = false;
-    if (W.first === "whist" && W.second === "whist") whisters = [a, b];
+    if (forcedWhist(R, h.contract) || (W.first === "whist" && W.second === "whist")) whisters = [a, b];
     else if (W.first === "whist") whisters = [a];
     else if (W.second === "whist") whisters = [b];
     else if (W.second === "half") {
@@ -374,7 +383,7 @@ const PREF = (() => {
 <div class="tw rt"><table><thead><tr><th class="n">Сдача</th><th class="n">Игра не ниже</th><th>Исход</th><th class="n">Гора за взятку</th><th class="n">Распасов подряд</th></tr></thead><tbody>${exRow}</tbody></table></div>`;
   }
 
-  return { DEFAULT_RULES, raspasRulesHTML, SUITS, CONTRACTS, contractRank, levelOf, trumpOf, newPulka, activeOrder, defendersOf, exitLevel, nextRaspas, score, apply, undo, isFinished, settle, updateRatings };
+  return { DEFAULT_RULES, raspasRulesHTML, forcedWhist, SUITS, CONTRACTS, contractRank, levelOf, trumpOf, newPulka, activeOrder, defendersOf, exitLevel, nextRaspas, score, apply, undo, isFinished, settle, updateRatings };
 })();
 
 /* ===== Карты, торговля, розыгрыш и простые боты ===== */
@@ -622,6 +631,7 @@ function newDeal() {
   G.d = { act, dealer: G.pulka.dealer, hands: {}, prikup, phase: "bid", bid: { turn: 0, current: null, passed: [], bidders: [], last: null }, declarer: null, contract: null,
           whist: {}, trick: [], tricks: {}, lead: act[0], showPrikup: false, discard: [], result: null };
   act.forEach((s, k) => { G.d.hands[s] = hands[k]; G.d.tricks[s] = 0; });
+  G.d.calls = {}; // что сказал каждый: ставки в торговле и вист/пас
   addLog(`— Раздача ${G.pulka.hands.length + 1}. Сдаёт ${nm(G.pulka.dealer)}.${G.pulka.raspasStep ? ` Распасов подряд: ${G.pulka.raspasStep}, выход — не ниже ${PREF.exitLevel(G.pulka)}-й.` : ""}`);
   draw(); loop();
 }
@@ -633,6 +643,7 @@ function bidOrderNext() {
 
 function makeBid(seat, bid) {
   const b = G.d.bid;
+  (G.d.calls[seat] ??= { bids: [] }).bids.push(bid === null ? "пас" : bid);
   if (bid === null) { b.passed.push(seat); addLog(`${nm(seat)}: пас`); }
   else { b.current = bid; b.last = seat; if (!b.bidders.includes(seat)) b.bidders.push(seat); addLog(`${nm(seat)}: ${bid}`); }
   const left = G.d.act.filter((s) => !b.passed.includes(s));
@@ -664,6 +675,12 @@ function declare(contract) {
   d.phase = "whist";
   d.defs = PREF.defendersOf(G.pulka, d.declarer);
   d.whist = { first: null, second: null, returned: false, asked: null };
+  if (PREF.forcedWhist(G.pulka.rules, contract)) {
+    d.whist.first = d.whist.second = "whist";
+    d.defs.forEach((s) => { (d.calls[s] ??= { bids: [] }).w = "вист (Сталинград)"; });
+    addLog("Сталинград: на 6♠ вистуют оба");
+    resolveWhist();
+  }
 }
 
 /* ---------- вист ---------- */
@@ -684,9 +701,10 @@ function botWhist(seat, stage) {
 function whistStep(seat, decision) {
   const d = G.d, w = d.whist, [a, b] = d.defs;
   const t = { whist: "вист", pass: "пас", half: "полвиста" };
-  if (w.first === null) { w.first = decision; addLog(`${nm(a)}: ${t[decision]}`); return; }
-  if (w.second === null) { w.second = decision; addLog(`${nm(b)}: ${t[decision]}`); if (decision !== "half") resolveWhist(); return; }
-  if (w.second === "half") { w.returned = decision; addLog(decision ? `${nm(a)} возвращает вист` : `${nm(a)} соглашается на полвиста`); resolveWhist(); }
+  const say = (s, v) => { (d.calls[s] ??= { bids: [] }).w = v; };
+  if (w.first === null) { w.first = decision; say(a, t[decision]); addLog(`${nm(a)}: ${t[decision]}`); return; }
+  if (w.second === null) { w.second = decision; say(b, t[decision]); addLog(`${nm(b)}: ${t[decision]}`); if (decision !== "half") resolveWhist(); return; }
+  if (w.second === "half") { w.returned = decision; say(a, decision ? "вист (вернул)" : "пас"); addLog(decision ? `${nm(a)} возвращает вист` : `${nm(a)} соглашается на полвиста`); resolveWhist(); }
 }
 
 function resolveWhist() {
@@ -694,8 +712,27 @@ function resolveWhist() {
   const whisters = w.first === "whist" ? (w.second === "whist" ? [a, b] : [a]) : w.second === "whist" ? [b] : w.second === "half" && w.returned ? [a] : [];
   d.whisters = whisters;
   if (!whisters.length) return finishDeal();
+  if (whisters.length === 1) {
+    // один вистует, второй пасует: вистующий выбирает — в открытую или в закрытую
+    d.whisterSeat = whisters[0];
+    d.passer = d.defs.find((s) => s !== whisters[0]);
+    d.phase = "whistmode";
+    return;
+  }
   startPlay();
 }
+
+// в открытую: карты обоих защитников на столе, вистующий ходит за обоих
+function chooseMode(open) {
+  const d = G.d;
+  d.open = !!open;
+  const c = (d.calls[d.whisterSeat] ??= { bids: [] });
+  c.w = (c.w || "вист") + (open ? " · в открытую" : " · в закрытую");
+  addLog(`${nm(d.whisterSeat)} вистует ${open ? "в открытую — карты на столе, ходит за обоих" : "в закрытую"}`);
+  startPlay();
+}
+// кто выбирает карту за этого игрока
+const controllerOf = (seat) => { const d = G.d; return d.open && seat === d.passer ? d.whisterSeat : seat; };
 
 /* ---------- распасы и розыгрыш ---------- */
 function startRaspas() {
@@ -816,10 +853,14 @@ async function loop() {
         if (seat === G.human && !G.auto) break;
         await sleep(BOT_DELAY);
         whistStep(seat, botWhist(seat, stage));
+      } else if (d.phase === "whistmode") {
+        if (d.whisterSeat === G.human && !G.auto) break;
+        await sleep(BOT_DELAY);
+        chooseMode(true); // бот вистует в открытую
       } else if (d.phase === "play") {
         if (d.pause) { draw(); await sleep(BOT_DELAY ? 900 : 0); afterTrick(); draw(); continue; }
         const seat = d.act[d.turn];
-        if (seat === G.human && !G.auto) break;
+        if (controllerOf(seat) === G.human && !G.auto) break;
         await sleep(BOT_DELAY);
         playCard(seat, CARDS.botPlay(d.hands[seat], d.trick, d.trump, roleOf(seat), partners, seat));
       } else break;
@@ -837,18 +878,34 @@ function draw() {
   const d = G.d, p = G.pulka, n = p.players.length;
   const seatsAround = []; for (let k = 1; k < n; k++) seatsAround.push((G.human + k) % n);
   const showAll = d.phase === "done";
+  // окошко рядом с картами: торговля и вист/пас этого игрока
+  const callHTML = (s) => {
+    if (!d.act.includes(s) || !d.calls) return "";
+    const c = d.calls[s] || { bids: [] };
+    const bidTurn = d.phase === "bid" && d.act[d.bid.turn] === s;
+    const w = d.whist || {}, defs = d.defs || [];
+    const whistTurn = d.phase === "whist" && s === (w.first === null ? defs[0] : w.second === null ? defs[1] : defs[0]);
+    const parts = [];
+    if (c.bids.length) parts.push(c.bids.map((x, i) => i === c.bids.length - 1 ? `<b>${esc(x)}</b>` : `<span class="muted">${esc(x)}</span>`).join(" → "));
+    if (c.w) parts.push(`<span class="w ${/вист/.test(c.w) ? "yes" : ""}">${esc(c.w)}</span>`);
+    if (bidTurn || whistTurn) parts.push('<span class="muted">думает…</span>');
+    if (!parts.length) return d.phase === "bid" ? '<div class="call"><span class="muted">ждёт хода</span></div>' : "";
+    if (d.raspas && d.phase !== "bid") parts.push('<span class="muted">распасы</span>');
+    return `<div class="call ${bidTurn || whistTurn ? "now" : ""}">${parts.join('<span class="muted">·</span>')}</div>`;
+  };
   const oppHTML = (s) => {
     const inDeal = d.act.includes(s);
     const tags = [s === d.dealer ? '<span class="tag">сдаёт</span>' : "", s === d.declarer ? `<span class="tag gold">${esc(d.contract || d.bid.current || "")}</span>` : "",
       d.whisters && d.whisters.includes(s) ? '<span class="tag">вист</span>' : "", inDeal && d.phase === "play" || showAll ? `<span class="tag">взяток: ${d.tricks[s]}</span>` : ""].join("");
-    const cards = !inDeal ? '<span class="sub" style="color:#cfe">не играет</span>' : showAll && d.hands[s].length ? `<div class="hand" style="justify-content:flex-start">${d.hands[s].map((c) => cardHTML(c)).join("")}</div>` : `<div class="backs">${d.hands[s].map(() => '<div class="back"></div>').join("")}</div>`;
-    return `<div class="opp"><div class="seat">${esc(nm(s))} ${tags}</div>${cards}</div>`;
+    const openHand = d.open && d.phase === "play" && s === d.passer;
+    const cards = !inDeal ? '<span class="sub" style="color:#cfe">не играет</span>' : openHand ? `<div class="hand" style="justify-content:flex-start">${d.hands[s].map((c) => cardHTML(c, okIds.includes(c.id) ? "ok" : controllerOf(d.act[d.turn]) === me && d.act[d.turn] === s ? "dim" : "", `data-id="${c.id}" ${okIds.includes(c.id) ? 'role="button" tabindex="0"' : ""}`)).join("")}</div>` : showAll && d.hands[s].length ? `<div class="hand" style="justify-content:flex-start">${d.hands[s].map((c) => cardHTML(c)).join("")}</div>` : `<div class="backs">${d.hands[s].map(() => '<div class="back"></div>').join("")}</div>`;
+    return `<div class="opp"><div class="seat">${esc(nm(s))} ${tags}</div>${callHTML(s)}${cards}</div>`;
   };
   const trickSlots = (d.pause && d.lastTrick ? d.lastTrick.cards : d.trick).map((x) => `<div class="slot">${cardHTML(x.card)}<span>${x.pk ? (x.who === -1 ? "прикуп" : "прикуп · " + esc(nm(x.who))) : esc(nm(x.who))}</span></div>`).join("");
   const me = G.human, inDealMe = d.act.includes(me);
   // какие мои карты активны
   let okIds = [];
-  if (d.phase === "play" && !d.pause && d.act[d.turn] === me) okIds = CARDS.legal(d.hands[me], d.trick, d.trump).map((c) => c.id);
+  if (d.phase === "play" && !d.pause && controllerOf(d.act[d.turn]) === me) okIds = CARDS.legal(d.hands[d.act[d.turn]], d.trick, d.trump).map((c) => c.id);
   const discardMode = d.phase === "prikup" && d.declarer === me;
   const myHand = inDealMe ? d.hands[me].map((c) => cardHTML(c, discardMode ? (d.discard.includes(c.id) ? "sel ok" : "ok") : okIds.includes(c.id) ? "ok" : d.phase === "play" && d.act[d.turn] === me ? "dim" : "", `data-id="${c.id}" ${discardMode || okIds.includes(c.id) ? 'role="button" tabindex="0"' : ""}`)).join("") : '<span class="sub" style="color:#cfe">Вы сдаёте и пропускаете эту раздачу</span>';
 
@@ -859,7 +916,7 @@ function draw() {
         <div class="status" aria-live="polite">${statusText()}</div>
         ${d.showPrikup ? `<div class="prikup">${d.prikup.map((c) => cardHTML(c)).join("")}</div>` : `<div class="trick">${trickSlots}</div>`}
       </div>
-      <div class="me"><div class="seat">${esc(nm(me))} ${me === d.dealer ? '<span class="tag">сдаёт</span>' : ""} ${me === d.declarer ? `<span class="tag gold">${esc(d.contract || d.bid.current || "")}</span>` : ""} ${d.whisters && d.whisters.includes(me) ? '<span class="tag">вист</span>' : ""} ${inDealMe && (d.phase === "play" || showAll) ? `<span class="tag">взяток: ${d.tricks[me]}</span>` : ""}</div><div class="hand" style="margin-top:8px">${myHand}</div></div>
+      <div class="me"><div class="seat">${esc(nm(me))} ${me === d.dealer ? '<span class="tag">сдаёт</span>' : ""} ${me === d.declarer ? `<span class="tag gold">${esc(d.contract || d.bid.current || "")}</span>` : ""} ${d.whisters && d.whisters.includes(me) ? '<span class="tag">вист</span>' : ""} ${inDealMe && (d.phase === "play" || showAll) ? `<span class="tag">взяток: ${d.tricks[me]}</span>` : ""}</div>${callHTML(me)}<div class="hand" style="margin-top:8px">${myHand}</div></div>
     </div>
     <div>
       <div class="panel" id="controls">${controls()}</div>
@@ -879,10 +936,13 @@ function statusText() {
   if (d.phase === "prikup") return d.declarer === G.human ? "Прикуп ваш — выберите 2 карты в снос" : `${esc(nm(d.declarer))} берёт прикуп`;
   if (d.phase === "declare") return d.declarer === G.human ? "Назначьте игру" : `${esc(nm(d.declarer))} назначает игру`;
   if (d.phase === "whist") return "Вистующие решают";
+  if (d.phase === "whistmode") return d.whisterSeat === G.human ? "Вистуете в открытую или в закрытую?" : `${esc(nm(d.whisterSeat))} решает: в открытую или в закрытую`;
   if (d.phase === "play") {
     const what = d.raspas ? "Распасы" : d.contract === "мизер" ? `Мизер, играет ${esc(nm(d.declarer))}` : `${esc(d.contract)}, играет ${esc(nm(d.declarer))}`;
     if (d.pause) return `${what} · взятку берёт ${esc(nm(d.trickWinner))}`;
-    return `${what} · ${d.act[d.turn] === G.human ? "ваш ход" : "ходит " + esc(nm(d.act[d.turn]))}`;
+    const s = d.act[d.turn], ctl = controllerOf(s);
+    if (ctl !== s) return `${what} · ход ${esc(nm(s))} (карты на столе) — ${ctl === G.human ? "выберите карту за него" : "ходит " + esc(nm(ctl))}`;
+    return `${what} · ${s === G.human ? "ваш ход" : "ходит " + esc(nm(s))}`;
   }
   if (d.phase === "done") return G.pulka.closed ? "Пулька закрыта" : "Раздача записана";
   return "";
@@ -906,6 +966,8 @@ function controls() {
     const avail = PREF.CONTRACTS.filter((c) => c !== "мизер" && CARDS.contractRank(c) >= CARDS.contractRank(d.bid.current));
     return `<h2>Заказ игры</h2><p class="sub">Не ниже ${esc(d.bid.current)}</p><label class="f">Игра<select id="declSel">${avail.map((c) => `<option>${c}</option>`).join("")}</select></label><button type="button" class="b" id="declOk">Заказать</button>`;
   }
+  if (d.phase === "whistmode" && d.whisterSeat === me)
+    return `<h2>Вист в открытую?</h2><p class="sub">${esc(nm(d.passer))} спасовал. В открытую карты обоих защитников кладутся на стол, и вы ходите за обоих. В закрытую каждый играет своими картами.</p><div class="btns"><button type="button" class="b" data-mode="1">В открытую</button><button type="button" class="g" data-mode="0">В закрытую</button></div>`;
   if (d.phase === "whist") {
     const w = d.whist, [a, b] = d.defs, lvl = PREF.levelOf(d.contract);
     const seat = w.first === null ? a : w.second === null ? b : a;
@@ -931,6 +993,7 @@ function bindControls() {
   $("#discardOk") && ($("#discardOk").onclick = () => { finishDiscard(d.hands[G.human].filter((c) => d.discard.includes(c.id))); d.discard = []; draw(); });
   document.querySelectorAll("[data-decl]").forEach((b) => b.onclick = () => { declare(b.dataset.decl); draw(); loop(); });
   $("#declOk") && ($("#declOk").onclick = () => { declare($("#declSel").value); draw(); loop(); });
+  document.querySelectorAll("[data-mode]").forEach((b) => b.onclick = () => { chooseMode(b.dataset.mode === "1"); draw(); loop(); });
   document.querySelectorAll("[data-w]").forEach((b) => b.onclick = () => {
     const v = b.dataset.w;
     whistStep(G.human, v === "ret" ? true : v === "agree" ? false : v); draw(); loop();
@@ -945,10 +1008,11 @@ function onCard(id) {
     d.discard = d.discard.includes(id) ? d.discard.filter((x) => x !== id) : d.discard.length < 2 ? [...d.discard, id] : d.discard;
     return draw();
   }
-  if (d.phase === "play" && d.act[d.turn] === G.human && !d.pause) {
-    const c = d.hands[G.human].find((x) => x.id === id);
-    if (!c || !CARDS.legal(d.hands[G.human], d.trick, d.trump).includes(c)) return;
-    playCard(G.human, c); draw(); loop();
+  const s = d.act[d.turn];
+  if (d.phase === "play" && controllerOf(s) === G.human && !d.pause) {
+    const c = d.hands[s].find((x) => x.id === id);
+    if (!c || !CARDS.legal(d.hands[s], d.trick, d.trump).includes(c)) return;
+    playCard(s, c); draw(); loop();
   }
 }
 

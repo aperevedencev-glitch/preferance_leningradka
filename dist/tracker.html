@@ -113,6 +113,7 @@ const PREF = (() => {
     poolToGora: 2,             // очко пули = 2 очка горы при расчёте
     whistPerGora: 10,          // очко горы = 10 вистов
     poolTarget: 20,            // пуля каждому
+    stalingrad: true,          // «Сталинград»: на 6♠ вист обязателен для обоих
   };
 
   const SUITS = ["♠", "♣", "♦", "♥"];
@@ -121,6 +122,8 @@ const PREF = (() => {
   CONTRACTS.push("мизер");
   for (const l of [9, 10]) for (const s of [...SUITS, "БК"]) CONTRACTS.push(l + s);
   const contractRank = (c) => CONTRACTS.indexOf(c);
+  // «Сталинград»: на 6♠ оба защитника обязаны вистовать
+  const forcedWhist = (R, contract) => !!(R && R.stalingrad !== false && contract === "6♠");
   const levelOf = (c) => (c === "мизер" ? 0 : parseInt(c, 10));
   const trumpOf = (c) => (c === "мизер" ? null : c.replace(/^\d+/, "") === "БК" ? null : c.replace(/^\d+/, ""));
 
@@ -212,7 +215,7 @@ const PREF = (() => {
     // кто вистует
     let whisters = [];
     let halfWhist = false;
-    if (W.first === "whist" && W.second === "whist") whisters = [a, b];
+    if (forcedWhist(R, h.contract) || (W.first === "whist" && W.second === "whist")) whisters = [a, b];
     else if (W.first === "whist") whisters = [a];
     else if (W.second === "whist") whisters = [b];
     else if (W.second === "half") {
@@ -375,7 +378,7 @@ const PREF = (() => {
 <div class="tw rt"><table><thead><tr><th class="n">Сдача</th><th class="n">Игра не ниже</th><th>Исход</th><th class="n">Гора за взятку</th><th class="n">Распасов подряд</th></tr></thead><tbody>${exRow}</tbody></table></div>`;
   }
 
-  return { DEFAULT_RULES, raspasRulesHTML, SUITS, CONTRACTS, contractRank, levelOf, trumpOf, newPulka, activeOrder, defendersOf, exitLevel, nextRaspas, score, apply, undo, isFinished, settle, updateRatings };
+  return { DEFAULT_RULES, raspasRulesHTML, forcedWhist, SUITS, CONTRACTS, contractRank, levelOf, trumpOf, newPulka, activeOrder, defendersOf, exitLevel, nextRaspas, score, apply, undo, isFinished, settle, updateRatings };
 })();
 
 </script>
@@ -518,15 +521,18 @@ function renderForm() {
       if (PREF.levelOf(F.contract) < ex) { F.contract = ex + "♠"; F.dt = ex; }
       const [a, b] = PREF.defendersOf(p, F.declarer);
       const lvl = PREF.levelOf(F.contract);
-      const halfOk = R.halfWhistLevels.includes(lvl) && F.first === "pass";
+      const forced = PREF.forcedWhist(R, F.contract);
+      if (forced) { F.first = "whist"; F.second = "whist"; F.returned = false; }
+      const halfOk = !forced && R.halfWhistLevels.includes(lvl) && F.first === "pass";
       if (F.second === "half" && !halfOk) F.second = "pass";
       const two = F.first === "whist" && F.second === "whist";
       const someone = F.first === "whist" || F.second === "whist" || (F.second === "half" && F.returned);
       html += `<label class="f">Контракт<select id="contract">${opts(PREF.CONTRACTS.filter((c) => c !== "мизер" && parseInt(c) >= PREF.exitLevel(p)).map((c) => [c, c]), F.contract)}</select></label>
         <div class="who">${esc(nm(a))} <span class="sub">— первый, слева от играющего</span></div>
-        <div class="seg">${[["whist","Вист"],["pass","Пас"]].map(([k,t]) => `<button type="button" id="f1-${k}" data-f1="${k}" aria-pressed="${F.first === k}">${t}</button>`).join("")}</div>
+        <div class="seg">${[["whist","Вист"],["pass","Пас"]].map(([k,t]) => `<button type="button" id="f1-${k}" data-f1="${k}" aria-pressed="${F.first === k}" ${forced && k !== "whist" ? "disabled" : ""}>${t}</button>`).join("")}</div>
         <div class="who">${esc(nm(b))} <span class="sub">— второй</span></div>
-        <div class="seg">${[["whist","Вист"],["pass","Пас"],["half","Полвиста"]].map(([k,t]) => `<button type="button" id="f2-${k}" data-f2="${k}" aria-pressed="${F.second === k}" ${k === "half" && !halfOk ? "disabled title=\"Полвиста — только если первый спасовал, на 6-й и 7-й играх\"" : ""}>${t}</button>`).join("")}</div>
+        <div class="seg">${[["whist","Вист"],["pass","Пас"],["half","Полвиста"]].map(([k,t]) => `<button type="button" id="f2-${k}" data-f2="${k}" aria-pressed="${F.second === k}" ${forced && k !== "whist" ? "disabled" : k === "half" && !halfOk ? "disabled title=\"Полвиста — только если первый спасовал, на 6-й и 7-й играх\"" : ""}>${t}</button>`).join("")}</div>
+        ${forced ? `<p class="sub">Сталинград: на 6♠ вист обязателен для обоих.</p>` : ""}
         ${F.second === "half" ? `<div class="seg"><button type="button" id="ret0" data-ret="0" aria-pressed="${!F.returned}">${esc(nm(a))} согласен</button><button type="button" id="ret1" data-ret="1" aria-pressed="${F.returned}">${esc(nm(a))} вернул вист</button></div>` : ""}
         ${someone ? `<div class="row2"><label class="f">Взяток у играющего<input type="number" min="0" max="10" id="dt" value="${F.dt}"></label>
           ${two ? `<label class="f">Взяток у ${esc(nm(a))}<input type="number" min="0" max="10" id="ta" value="${F.ta}"></label>` : ""}</div>
@@ -621,6 +627,8 @@ function renderHelp() {
       <li><b>Джентльменский вист.</b> Если вистует один, а второй пасует, и играющий недобрал, висты за взятки защиты делятся пополам между вистующим и пасовавшим. Если игра сыграна, все висты пишет вистующий.</li>
       <li><b>Консоляция</b> при недоборе пишется обоим защитникам, в том числе пасовавшему.</li>
       <li><b>Полуответственный вист.</b> Если вистующие не взяли обязательное число взяток, вистующему в гору пишется по ${R.whistPenaltyMult === 1 ? "стоимости игры" : R.whistPenaltyMult + " × стоимости"} за каждую недобранную. При двух вистующих каждый отвечает за половину.</li>
+      <li><b>Вист в открытую или в закрытую.</b> Если вистует один, а второй пасует, вистующий выбирает: положить карты обоих защитников на стол и ходить за обоих или играть в закрытую — каждый своими картами. На запись это не влияет.</li>
+      <li><b>Сталинград.</b> На 6♠ оба защитника обязаны вистовать — пасовать и говорить «полвиста» нельзя.</li>
       <li><b>Полвиста</b> (6-я и 7-я игры): первый пасует, второй говорит «полвиста» — игра засчитывается без розыгрыша, сказавший пишет висты за половину обязательных взяток. Первый может вернуть вист — тогда вистует он, а второй становится пасующим.</li>
       <li><b>Распасы</b>: каждая взятка — в гору по ${R.raspasBase}, при распасах подряд цена растёт: ${R.raspasBase}, ${R.raspasBase * 2}, ${R.raspasBase * 3}. Ни одной взятки — +${R.raspasZeroBonus} в пулю (× ступень). Выход из распасов — во вкладке «Правила распасов».</li>
       <li><b>Итог</b>: недописанная до ${R.poolTarget} пуля переводится в гору (очко пули = ${R.poolToGora} очка горы). Гора пересчитывается в висты (очко = ${R.whistPerGora} вистов) относительно средней, к ней прибавляется разница вистов с каждым партнёром. Сумма итогов всех игроков равна нулю.</li>

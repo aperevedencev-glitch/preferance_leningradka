@@ -2,11 +2,11 @@ const P=require('../src/engine.js');const assert=require('assert');
 let p=P.newPulka(['А','Б','В']); // dealer 0 → active 1,2,0
 assert.deepStrictEqual(P.activeOrder(p),[1,2,0]);
 assert.deepStrictEqual(P.defendersOf(p,1),[2,0]);
-// 6♠ сыграна, вистует один (2), взял 4 → пуля 2, висты 4*4=16
-let d=P.score(p,{type:'game',declarer:1,contract:'6♠',whist:{first:'whist',second:'pass'},tricks:{1:6}});
+// 6♣ сыграна, вистует один (2), взял 4 → пуля 2, висты 4*4=16
+let d=P.score(p,{type:'game',declarer:1,contract:'6♣',whist:{first:'whist',second:'pass'},tricks:{1:6}});
 assert.equal(d.pool[1],2); assert.equal(d.whists[2][1],16); assert.equal(d.whists[0][1],0);
-// 6♠ ремиз на 1, один вистует: гора 1*2*2=4, консоляция 4 каждому, висты 5 взяток*4=20 пополам 10/10
-d=P.score(p,{type:'game',declarer:1,contract:'6♠',whist:{first:'whist',second:'pass'},tricks:{1:5}});
+// 6♣ ремиз на 1, один вистует: гора 1*2*2=4, консоляция 4 каждому, висты 5 взяток*4=20 пополам 10/10
+d=P.score(p,{type:'game',declarer:1,contract:'6♣',whist:{first:'whist',second:'pass'},tricks:{1:5}});
 assert.equal(d.gora[1],4); assert.equal(d.whists[2][1],4+10); assert.equal(d.whists[0][1],4+10);
 // 6 сыграна, вистующий один взял 2 (<4): гора вистующему 2*2*1=4
 d=P.score(p,{type:'game',declarer:1,contract:'6♥',whist:{first:'whist',second:'pass'},tricks:{1:8}});
@@ -42,7 +42,7 @@ const r={}; P.updateRatings(r,s); console.log(s, r); console.log('ok');
   A.throws(() => P2.score(q, game('6♠')), /не ниже 7/);
   ras(); A.strictEqual(P2.exitLevel(q), 8);
   A.throws(() => P2.score(q, game('7БК')), /не ниже 8/);
-  ras(); A.strictEqual(P2.exitLevel(q), 6); P2.score(q, game('6♠'));
+  ras(); A.strictEqual(P2.exitLevel(q), 6); P2.score(q, game('6♣'));
   ras(); A.strictEqual(q.raspasStep, 1); A.strictEqual(P2.exitLevel(q), 7); // четвёртые = снова первые
   P2.apply(q, game('7♠')); A.strictEqual(q.raspasStep, 0); A.strictEqual(P2.exitLevel(q), 6);
   console.log('exit ok');
@@ -57,4 +57,15 @@ const r={}; P.updateRatings(r,s); console.log(s, r); console.log('ok');
   d = P3.score(q, { type: 'raspas', tricks: { 1: 4, 2: 1, 3: 5 } });
   A.strictEqual(d.gora[0] + d.pool[0], 0);
   console.log('raspas4 ok');
+}
+
+// Сталинград: 6♠ — вистуют оба, даже если записано «пас»
+{
+  const P4 = require('../src/engine.js'); const A = require('assert');
+  const q = P4.newPulka(['А','Б','В']);
+  const [a, b] = P4.defendersOf(q, 1);
+  const d = P4.score(q, { type: 'game', declarer: 1, contract: '6♠', whist: { first: 'pass', second: 'pass' }, tricks: { 1: 6, [a]: 3, [b]: 1 } });
+  A.strictEqual(d.whists[a][1], 12); A.strictEqual(d.whists[b][1], 4); A.strictEqual(d.pool[1], 2);
+  A.ok(P4.forcedWhist(q.rules, '6♠') && !P4.forcedWhist(q.rules, '6♣'));
+  console.log('stalingrad ok');
 }
