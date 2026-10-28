@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Преферанс «Ленинградка»</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>♠</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Golos+Text:wght@400;500;700&display=swap">
+<style>
+:root{--bg:#E9E6DC;--paper:#FBFAF5;--ink:#1F2A44;--muted:#5D6675;--line:#C9CED6;--red:#B42318}
+@media (prefers-color-scheme:dark){:root{--bg:#12161C;--paper:#1A2028;--ink:#E6E9EF;--muted:#9AA3B2;--line:#2C3440;--red:#F07167}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 "Golos Text",system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px 16px}
+main{width:100%;max-width:560px}
+h1{font:700 44px/1.1 Caveat,cursive;margin:0 0 6px}
+.suits{color:var(--muted);letter-spacing:6px;font-size:18px}
+.suits b{color:var(--red);font-weight:400}
+p.lead{color:var(--muted);margin:8px 0 24px}
+a.card{display:block;background:var(--paper);border:1px solid var(--line);border-radius:14px;padding:18px 20px;margin-bottom:14px;color:inherit;text-decoration:none;transition:transform .15s,border-color .15s}
+a.card:hover{transform:translateY(-2px);border-color:var(--ink)}
+a.card strong{display:block;font-size:19px;margin-bottom:4px}
+a.card span{color:var(--muted);font-size:15px}
+footer{color:var(--muted);font-size:13px;margin-top:22px}
+</style>
+</head>
+<body>
+<main>
+  <div class="suits">♠ <b>♦</b> ♣ <b>♥</b></div>
+  <h1>Преферанс «Ленинградка»</h1>
+  <p class="lead">Запись пули для живой игры и игра против ботов. Работает в браузере, в том числе на телефоне.</p>
+  <a class="card" href="dist/tracker.html">
+    <strong>Пулька Ленинградка</strong>
+    <span>Запись пули на 3–4 игрока: игры, мизеры, распасы, висты, итоговый расчёт и рейтинг.</span>
+  </a>
+  <a class="card" href="dist/game.html">
+    <strong>Ленинградка за столом</strong>
+    <span>Сыграть пульку с тремя ботами: торговля, прикуп, вист, розыгрыш.</span>
+  </a>
+  <footer>Рейтинг и сохранённые пульки хранятся в вашем браузере.</footer>
+</main>
+</body>
+</html>
