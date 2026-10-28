@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+</head>
+<body>
+<title>Пулька Ленинградка</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Golos+Text:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: бумажный лист пульки в клетку — слева запись раздачи, справа лист с пулей/горой/вистами, ниже история и рейтинг */
+:root{
+  --bg:#E9E6DC; --paper:#FBFAF5; --grid:#DCE3EA; --ink:#1F2A44; --muted:#5D6675;
+  --pool:#1D4ED8; --gora:#B42318; --whist:#1F7A5A; --line:#C9CED6; --chip:#EEF1F5;
+  --hand:"Caveat", "Comic Sans MS", cursive; --ui:"Golos Text", system-ui, sans-serif; --mono:"JetBrains Mono", ui-monospace, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12161C;--paper:#1A2028;--grid:#232B35;--ink:#E5E7EB;--muted:#9AA3AF;--pool:#7AA2FF;--gora:#FF8A80;--whist:#5FD3A5;--line:#2E3743;--chip:#222A34;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#12161C;--paper:#1A2028;--grid:#232B35;--ink:#E5E7EB;--muted:#9AA3AF;--pool:#7AA2FF;--gora:#FF8A80;--whist:#5FD3A5;--line:#2E3743;--chip:#222A34;color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--ui);margin:0}
+.wrap{max-width:1180px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:baseline;justify-content:space-between;margin-bottom:16px}
+h1{font:700 40px/1 var(--hand);margin:0}
+h2{font:700 26px/1.1 var(--hand);margin:0 0 10px}
+.sub{color:var(--muted);font-size:13.5px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tabs button,.seg button{font:500 13.5px var(--ui);border:1px solid var(--line);background:transparent;color:var(--ink);padding:7px 12px;border-radius:999px;cursor:pointer}
+.tabs button[aria-pressed="true"],.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.seg button:disabled{opacity:.35;cursor:not-allowed}
+.grid{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+.sheet{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:16px;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:22px 22px;min-width:0}
+.box{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:16px;min-width:0}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted);margin-bottom:10px}
+select,input{font:15px var(--ui);color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%}
+input[type=number]{font-family:var(--mono)}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 10px}
+.who{font-weight:500;font-size:14px;margin:8px 0 2px}
+.btn{font:600 14.5px var(--ui);background:var(--ink);color:var(--paper);border:0;border-radius:6px;padding:10px 14px;cursor:pointer;width:100%}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);width:auto}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.preview{font:13px var(--mono);color:var(--muted);background:var(--chip);border-radius:6px;padding:8px 10px;margin:10px 0;white-space:pre-wrap;min-height:2.6em}
+.err{color:var(--gora)}
+.players{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+.pl{background:var(--paper);border:1.5px solid var(--ink);border-radius:4px;padding:12px;position:relative}
+.pl.dealer::after{content:"сдаёт";position:absolute;top:-10px;right:10px;background:var(--ink);color:var(--paper);font:600 11px var(--ui);padding:2px 8px;border-radius:999px}
+.pl h3{font:700 28px/1 var(--hand);margin:0 0 8px;overflow-wrap:anywhere}
+.kv{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-top:1px dashed var(--line);padding:6px 0}
+.kv span{font-size:12.5px;color:var(--muted)}
+.kv b{font:700 30px/1 var(--hand);font-variant-numeric:tabular-nums}
+.kv b.pool{color:var(--pool)} .kv b.gora{color:var(--gora)}
+.bar{height:6px;background:var(--chip);border-radius:3px;overflow:hidden;margin:2px 0 6px}
+.bar i{display:block;height:100%;background:var(--pool);border-radius:3px}
+.wl{font:13px var(--mono);color:var(--whist)}
+.total{font:600 14px var(--mono)}
+.total.pos{color:var(--whist)} .total.neg{color:var(--gora)}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:500 12px var(--ui);color:var(--muted)}
+td.n,th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tw{overflow-x:auto}
+.hist li{margin:0 0 10px;font-size:13.5px}
+.hist small{display:block;color:var(--muted);font:12px var(--mono);white-space:pre-wrap}
+.banner{border:2px solid var(--whist);border-radius:6px;padding:14px;margin-bottom:16px;background:var(--paper)}
+details summary{cursor:pointer;color:var(--muted);font-size:13.5px;margin-top:6px}
+.rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px}
+.sec{margin-top:18px}
+:focus-visible{outline:2px solid var(--pool);outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+  <header>
+    <div><h1>Пулька · Ленинградка</h1><div class="sub">Запись пули, горы и вистов на 3 или 4 игрока, итоговый расчёт и рейтинг</div></div>
+    <nav class="tabs" aria-label="Разделы">
+      <button type="button" id="t-game" data-t="game" aria-pressed="true">Пулька</button>
+      <button type="button" id="t-rating" data-t="rating" aria-pressed="false">Рейтинг и рекорды</button>
+      <button type="button" id="t-help" data-t="help" aria-pressed="false">Правила записи</button>
+    </nav>
+  </header>
+  <main id="view"></main>
+</div>
+
+<script>
+/* ===== Движок записи пули: Ленинградка =====
+   Чистые функции без DOM. Используется и трекером, и игрой.
+   Единицы: пуля и гора — в очках, висты — в вистах. */
+const PREF = (() => {
+  const DEFAULT_RULES = {
+    name: "Ленинградка",
+    cost: { 6: 2, 7: 4, 8: 6, 9: 8, 10: 10 }, // в пулю за сыгранную игру
+    misere: 10,                // в пулю за сыгранный мизер
+    whistMult: 2,              // вист за взятку = стоимость × 2
+    goraMult: 2,               // гора играющему за недобор = стоимость × 2 за взятку
+    consolationMult: 2,        // консоляция каждому защитнику = стоимость × 2 за недобор
+    misereGoraPerTrick: 20,    // гора за каждую взятку на мизере
+    whistNeed: { 6: 4, 7: 2, 8: 1, 9: 1, 10: 0 }, // обязательные взятки вистующих
+    whistPenaltyMult: 1,       // полуответственный вист: гора вистующему = стоимость × 1 за недобор
+    halfWhistLevels: [6, 7],   // где разрешён полвиста
+    raspasBase: 2,             // распасы: гора за взятку = 2, 4, 6…
+    raspasMaxStep: 3,          // прогрессия до 3-й ступени
+    raspasZeroBonus: 1,        // в пулю за 0 взяток на распасах (× ступень)
+    poolToGora: 2,             // очко пули = 2 очка горы при расчёте
+    whistPerGora: 10,          // очко горы = 10 вистов
+    poolTarget: 20,            // пуля каждому
+  };
+
+  const SUITS = ["♠", "♣", "♦", "♥"];
+  const CONTRACTS = [];
+  for (const l of [6, 7, 8]) for (const s of [...SUITS, "БК"]) CONTRACTS.push(l + s);
+  CONTRACTS.push("мизер");
+  for (const l of [9, 10]) for (const s of [...SUITS, "БК"]) CONTRACTS.push(l + s);
+  const contractRank = (c) => CONTRACTS.indexOf(c);
+  const levelOf = (c) => (c === "мизер" ? 0 : parseInt(c, 10));
+  const trumpOf = (c) => (c === "мизер" ? null : c.replace(/^\d+/, "") === "БК" ? null : c.replace(/^\d+/, ""));
+
+  function newPulka(names, rules = DEFAULT_RULES) {
+    const n = names.length;
+    return {
+      rules: { ...DEFAULT_RULES, ...rules },
+      players: names.map((name) => ({ name, pool: 0, gora: 0, whists: Array(n).fill(0) })),
+      hands: [],          // история записей (для отмены)
+      raspasStep: 0,      // сколько распасов подряд
+      dealer: 0,
+      closed: false,
+    };
+  }
+
+  // активные игроки раздачи (при 4-х сдающий не играет), по кругу слева от сдающего
+  function activeOrder(p) {
+    const n = p.players.length;
+    const order = [];
+    for (let k = 1; k <= n; k++) {
+      const i = (p.dealer + k) % n;
+      if (n === 4 && i === p.dealer) continue;
+      order.push(i);
+    }
+    return n === 4 ? order.slice(0, 3) : order;
+  }
+
+  // защитники в порядке хода: первый — слева от играющего (среди активных)
+  function defendersOf(p, declarer) {
+    const act = activeOrder(p);
+    const k = act.indexOf(declarer);
+    return [act[(k + 1) % 3], act[(k + 2) % 3]];
+  }
+
+  /* Запись раздачи. Возвращает список изменений (delta), не меняя p.
+     h = { type:'game', declarer, contract, whist:{ first:'whist'|'pass', second:'whist'|'pass'|'half', returned:bool },
+           tricks:{ [idx]: n } }  — взятки играющего и вистующих (для джентльменского виста — все взятки защиты у вистующего)
+     h = { type:'misere', declarer, tricks:n }
+     h = { type:'raspas', tricks:{ [idx]: n } } */
+  function score(p, h) {
+    const R = p.rules;
+    const n = p.players.length;
+    const d = { pool: Array(n).fill(0), gora: Array(n).fill(0), whists: Array.from({ length: n }, () => Array(n).fill(0)), notes: [], raspasStep: 0 };
+    const w = (from, to, v, why) => { if (v) { d.whists[from][to] += v; d.notes.push(`${p.players[from].name} → ${p.players[to].name}: ${v} вист. (${why})`); } };
+    const name = (i) => p.players[i].name;
+
+    if (h.type === "raspas") {
+      const step = Math.min(p.raspasStep + 1, R.raspasMaxStep);
+      d.raspasStep = p.raspasStep + 1;
+      for (const [i, t] of Object.entries(h.tricks)) {
+        if (t > 0) { d.gora[i] += t * R.raspasBase * step; d.notes.push(`${name(i)}: ${t} взят. на распасах → гора +${t * R.raspasBase * step}`); }
+        else if (R.raspasZeroBonus) { d.pool[i] += R.raspasZeroBonus * step; d.notes.push(`${name(i)}: ни одной взятки → пуля +${R.raspasZeroBonus * step}`); }
+      }
+      return d;
+    }
+
+    if (h.type === "misere") {
+      const t = h.tricks;
+      if (t === 0) { d.pool[h.declarer] += R.misere; d.notes.push(`${name(h.declarer)}: мизер сыгран → пуля +${R.misere}`); }
+      else { d.gora[h.declarer] += t * R.misereGoraPerTrick; d.notes.push(`${name(h.declarer)}: мизер, ${t} взят. → гора +${t * R.misereGoraPerTrick}`); }
+      return d;
+    }
+
+    // обычная игра
+    const lvl = levelOf(h.contract);
+    const cost = R.cost[lvl];
+    const decl = h.declarer;
+    const [a, b] = defendersOf(p, decl);
+    const W = h.whist || {};
+    const wpt = cost * R.whistMult;
+    const need = R.whistNeed[lvl];
+
+    // кто вистует
+    let whisters = [];
+    let halfWhist = false;
+    if (W.first === "whist" && W.second === "whist") whisters = [a, b];
+    else if (W.first === "whist") whisters = [a];
+    else if (W.second === "whist") whisters = [b];
+    else if (W.second === "half") {
+      if (!R.halfWhistLevels.includes(lvl)) throw new Error(`Полвиста на ${lvl}-й игре не допускается`);
+      if (W.returned) whisters = [a]; // первый вернул вист — он вистует, второй становится пасующим
+      else halfWhist = true;
+    }
+
+    if (whisters.length === 0) {
+      d.pool[decl] += cost;
+      d.notes.push(`${name(decl)}: ${h.contract} без виста → пуля +${cost}`);
+      if (halfWhist) {
+        const v = (need / 2) * wpt;
+        w(b, decl, v, "полвиста");
+      }
+      return d;
+    }
+
+    const dt = Number(h.tricks[decl]);
+    const defTricks = 10 - dt;
+    const made = dt >= lvl;
+    if (made) { d.pool[decl] += cost; d.notes.push(`${name(decl)}: ${h.contract} сыграна → пуля +${cost}`); }
+    else {
+      const short = lvl - dt;
+      d.gora[decl] += short * cost * R.goraMult;
+      d.notes.push(`${name(decl)}: недобор ${short} → гора +${short * cost * R.goraMult}`);
+      // консоляция обоим защитникам
+      for (const x of [a, b]) w(x, decl, short * cost * R.consolationMult, "консоляция");
+    }
+
+    if (whisters.length === 2) {
+      const ta = Number(h.tricks[a]), tb = Number(h.tricks[b]);
+      if (ta + tb !== defTricks) throw new Error(`У вистующих должно быть ${defTricks} взят. в сумме`);
+      w(a, decl, ta * wpt, `${ta} взят.`);
+      w(b, decl, tb * wpt, `${tb} взят.`);
+      // полуответственный вист: каждый отвечает за половину обязательных взяток
+      if (made && ta + tb < need) {
+        for (const [x, t] of [[a, ta], [b, tb]]) {
+          const s = Math.max(0, need / 2 - t);
+          if (s) { d.gora[x] += s * cost * R.whistPenaltyMult; d.notes.push(`${name(x)}: недобор на висте ${s} → гора +${s * cost * R.whistPenaltyMult}`); }
+        }
+      }
+    } else {
+      const x = whisters[0];
+      const passer = x === a ? b : a;
+      if (!made) {
+        // джентльменский вист: при ремизе висты за взятки делятся пополам с пасующим
+        w(x, decl, (defTricks * wpt) / 2, `${defTricks} взят. защиты, половина`);
+        w(passer, decl, (defTricks * wpt) / 2, `${defTricks} взят. защиты, половина`);
+      } else {
+        w(x, decl, defTricks * wpt, `${defTricks} взят. защиты`);
+        const s = Math.max(0, need - defTricks);
+        if (s) { d.gora[x] += s * cost * R.whistPenaltyMult; d.notes.push(`${name(x)}: недобор на висте ${s} → гора +${s * cost * R.whistPenaltyMult}`); }
+      }
+    }
+    return d;
+  }
+
+  function apply(p, h) {
+    const d = score(p, h);
+    const before = JSON.parse(JSON.stringify({ players: p.players, raspasStep: p.raspasStep, dealer: p.dealer, closed: p.closed }));
+    p.players.forEach((pl, i) => {
+      pl.pool += d.pool[i]; pl.gora += d.gora[i];
+      pl.whists = pl.whists.map((v, j) => v + d.whists[i][j]);
+    });
+    p.raspasStep = h.type === "raspas" ? d.raspasStep : 0;
+    p.dealer = (p.dealer + 1) % p.players.length;
+    p.hands.push({ h, d, before, at: Date.now() });
+    if (isFinished(p)) p.closed = true;
+    return d;
+  }
+
+  function undo(p) {
+    const last = p.hands.pop();
+    if (!last) return false;
+    Object.assign(p, { players: last.before.players, raspasStep: last.before.raspasStep, dealer: last.before.dealer, closed: last.before.closed });
+    return true;
+  }
+
+  // пуля закрыта, когда сумма пуль достигла n × цель
+  function isFinished(p) {
+    const T = p.rules.poolTarget;
+    return p.players.reduce((s, pl) => s + pl.pool, 0) >= T * p.players.length;
+  }
+
+  // итоговый расчёт в вистах (сумма по всем = 0)
+  function settle(p) {
+    const R = p.rules, n = p.players.length;
+    const geff = p.players.map((pl) => pl.gora + R.poolToGora * (R.poolTarget - pl.pool));
+    const sumG = geff.reduce((a, b) => a + b, 0);
+    return p.players.map((pl, i) => {
+      let s = 0;
+      for (let j = 0; j < n; j++) if (j !== i) s += p.players[i].whists[j] - p.players[j].whists[i];
+      s += (R.whistPerGora * (sumG - n * geff[i])) / n;
+      return { name: pl.name, total: Math.round(s * 100) / 100, gora: geff[i] };
+    });
+  }
+
+  // рейтинг Эло по итогам пульки
+  function updateRatings(ratings, result, K = 24) {
+    const n = result.length;
+    const r = (name) => (ratings[name] ??= { rating: 1500, pulkas: 0, wins: 0, best: null, sum: 0 });
+    const delta = Object.fromEntries(result.map((x) => [x.name, 0]));
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) {
+      const A = r(result[i].name), B = r(result[j].name);
+      const ea = 1 / (1 + 10 ** ((B.rating - A.rating) / 400));
+      const sa = result[i].total > result[j].total ? 1 : result[i].total < result[j].total ? 0 : 0.5;
+      const k = K / (n - 1);
+      delta[result[i].name] += k * (sa - ea);
+      delta[result[j].name] += k * (ea - sa);
+    }
+    const top = Math.max(...result.map((x) => x.total));
+    for (const x of result) {
+      const s = r(x.name);
+      s.rating = Math.round(s.rating + delta[x.name]);
+      s.pulkas++; s.sum += x.total;
+      if (x.total === top) s.wins++;
+      if (s.best === null || x.total > s.best) s.best = x.total;
+    }
+    return delta;
+  }
+
+  return { DEFAULT_RULES, SUITS, CONTRACTS, contractRank, levelOf, trumpOf, newPulka, activeOrder, defendersOf, score, apply, undo, isFinished, settle, updateRatings };
+})();
+
+</script>
+<script>
+const KEY = "pref_leningrad_v1";
+const store = (() => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } })();
+let S = { pulka: store.pulka || null, ratings: store.ratings || {}, saved: store.saved || [], tab: "game" };
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify({ pulka: S.pulka, ratings: S.ratings, saved: S.saved })); } catch (e) {} };
+const $ = (s, r = document) => r.querySelector(s);
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const fmt = (x) => (Math.round(x * 100) / 100).toLocaleString("ru-RU");
+
+document.querySelectorAll(".tabs button").forEach((b) => b.onclick = () => { S.tab = b.dataset.t; render(); });
+
+function render() {
+  document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.t === S.tab));
+  if (S.tab === "rating") return renderRating();
+  if (S.tab === "help") return renderHelp();
+  if (!S.pulka) return renderSetup();
+  renderGame();
+}
+
+/* ---------- новая пулька ---------- */
+function renderSetup() {
+  const known = Object.keys(S.ratings);
+  const R = PREF.DEFAULT_RULES;
+  $("#view").innerHTML = `<div class="grid"><div class="box">
+    <h2>Новая пулька</h2>
+    <div class="seg" role="group" aria-label="Игроков"><button type="button" id="n3" data-n="3" aria-pressed="true">3 игрока</button><button type="button" id="n4" data-n="4" aria-pressed="false">4 игрока</button></div>
+    <div id="names"></div>
+    <label class="f">Пуля каждому, очков<input id="target" type="number" min="4" step="2" value="${R.poolTarget}"></label>
+    <details><summary>Ставки и правила</summary><div class="rules">
+      ${[["whistMult","Вист за взятку, × стоимость"],["goraMult","Гора за недобор, × стоимость"],["consolationMult","Консоляция, × стоимость"],["whistPenaltyMult","Недобор на висте, × стоимость"],["misere","Мизер в пулю"],["misereGoraPerTrick","Мизер: гора за взятку"],["raspasBase","Распасы: гора за взятку"],["raspasMaxStep","Распасы: ступеней прогрессии"],["poolToGora","Очко пули = очков горы"],["whistPerGora","Очко горы = вистов"]]
+        .map(([k,t]) => `<label class="f">${t}<input type="number" step="1" id="r-${k}" value="${R[k]}"></label>`).join("")}
+    </div><p class="sub">Стоимость игр: 6 — 2, 7 — 4, 8 — 6, 9 — 8, 10 — 10. Полвиста — на 6-х и 7-х играх.</p></details>
+    <button class="btn" id="start" type="button" style="margin-top:12px">Начать</button>
+    <datalist id="known">${known.map((k) => `<option value="${esc(k)}">`).join("")}</datalist>
+  </div>
+  <div class="sheet"><h2>Как вести</h2><p>После каждой раздачи выберите, что игралось: игра, мизер или распасы. Укажите играющего, контракт, решения вистующих и взятки. Приложение само запишет пулю, гору и висты, а в конце посчитает, кто сколько выиграл в вистах.</p><p class="sub">При игре вчетвером сдающий в раздаче не участвует; сдающий меняется по кругу автоматически.</p></div></div>`;
+  let n = 3;
+  const names = () => { $("#names").innerHTML = Array.from({ length: n }, (_, i) => `<label class="f">Игрок ${i + 1}<input id="pn${i}" list="known" value="${esc(known[i] || "")}" placeholder="Имя"></label>`).join(""); };
+  names();
+  document.querySelectorAll("[data-n]").forEach((b) => b.onclick = () => { n = +b.dataset.n; document.querySelectorAll("[data-n]").forEach((x) => x.setAttribute("aria-pressed", x === b)); names(); });
+  $("#start").onclick = () => {
+    const list = Array.from({ length: n }, (_, i) => $("#pn" + i).value.trim() || `Игрок ${i + 1}`);
+    if (new Set(list).size !== list.length) return alertBox("Имена игроков должны отличаться");
+    const rules = { poolTarget: Math.max(2, +$("#target").value || R.poolTarget) };
+    for (const k of ["whistMult","goraMult","consolationMult","whistPenaltyMult","misere","misereGoraPerTrick","raspasBase","raspasMaxStep","poolToGora","whistPerGora"]) rules[k] = +$("#r-" + k).value;
+    S.pulka = PREF.newPulka(list, rules);
+    save(); render();
+  };
+}
+function alertBox(t) { const e = $("#formErr") || $("#start"); if (e && e.id === "formErr") e.textContent = t; else { const p = document.createElement("p"); p.className = "err"; p.textContent = t; $("#start").after(p); setTimeout(() => p.remove(), 3000); } }
+
+/* ---------- текущая пулька ---------- */
+let F = { type: "game", declarer: null, contract: "6♠", first: "whist", second: "pass", returned: false, dt: 6, ta: 4, misT: 0, ras: {} };
+
+function renderGame() {
+  const p = S.pulka, act = PREF.activeOrder(p), n = p.players.length;
+  if (F.declarer === null || !act.includes(F.declarer)) F.declarer = act[0];
+  const settle = PREF.settle(p);
+  $("#view").innerHTML = `
+  ${p.closed ? `<div class="banner"><h2>Пулька закрыта</h2>${resultTable(settle)}
+     <div class="seg" style="margin-top:10px">${p.rated ? `<span class="sub">Результат записан в рейтинг.</span>` : `<button type="button" class="btn" style="width:auto" id="rate">Записать в рейтинг</button>`}
+     <button type="button" class="btn ghost" id="newP">Новая пулька</button><button type="button" class="btn ghost" id="undo2">Отменить последнюю раздачу</button></div></div>` : ""}
+  <div class="grid">
+    <div class="box" ${p.closed ? 'hidden' : ''}>
+      <h2>Раздача ${p.hands.length + 1}</h2>
+      <div class="sub" style="margin:-4px 0 8px">Сдаёт: ${esc(p.players[p.dealer].name)}${n === 4 ? " (не играет)" : ""}${p.raspasStep ? ` · распасов подряд: ${p.raspasStep}` : ""}</div>
+      <div class="seg" role="group" aria-label="Что игралось">
+        ${[["game","Игра"],["misere","Мизер"],["raspas","Распасы"]].map(([k,t]) => `<button type="button" id="ty-${k}" data-ty="${k}" aria-pressed="${F.type === k}">${t}</button>`).join("")}
+      </div>
+      <div id="form"></div>
+      <div class="preview" id="preview" aria-live="polite"></div>
+      <p class="err" id="formErr"></p>
+      <button class="btn" type="button" id="write">Записать раздачу</button>
+    </div>
+    <div class="sheet">
+      <div class="players">${p.players.map((pl, i) => playerCard(p, pl, i, settle[i])).join("")}</div>
+      <p class="sub" style="margin-top:12px">«Итог сейчас» — расчёт в вистах, если закрыть пульку в эту минуту: недописанная пуля переводится в гору.</p>
+    </div>
+  </div>
+  <div class="grid sec">
+    <div class="box"><h2>История</h2>${p.hands.length ? `<button type="button" class="btn ghost" id="undo">Отменить последнюю раздачу</button>` : ""}
+      <ol class="hist" reversed>${p.hands.map((x, k) => `<li>${esc(handTitle(p, x.h))}<small>${esc(x.d.notes.join("\n"))}</small></li>`).reverse().join("") || '<p class="sub">Раздач пока не было.</p>'}</ol></div>
+    <div class="box"><h2>Пулька</h2><p class="sub">Пуля до ${p.rules.poolTarget} каждому · игроков ${n} · правила «${esc(p.rules.name)}»</p>
+      <button type="button" class="btn ghost" id="finish">Закрыть пульку досрочно</button> <button type="button" class="btn ghost" id="drop">Удалить пульку</button><p class="sub" id="dropConfirm"></p></div>
+  </div>`;
+  document.querySelectorAll("[data-ty]").forEach((b) => b.onclick = () => { F.type = b.dataset.ty; renderGame(); });
+  if (!p.closed) { renderForm(); $("#write").onclick = write; }
+  const u = () => { PREF.undo(p); p.rated = false; save(); render(); };
+  $("#undo") && ($("#undo").onclick = u); $("#undo2") && ($("#undo2").onclick = u);
+  $("#rate") && ($("#rate").onclick = () => { PREF.updateRatings(S.ratings, settle); p.rated = true; S.saved.unshift({ at: Date.now(), result: settle }); save(); render(); });
+  $("#newP") && ($("#newP").onclick = () => { S.pulka = null; save(); render(); });
+  $("#finish").onclick = () => { p.closed = true; save(); render(); };
+  let armed = false;
+  $("#drop").onclick = () => { if (!armed) { armed = true; $("#dropConfirm").textContent = "Нажмите ещё раз, чтобы удалить пульку без записи в рейтинг."; return; } S.pulka = null; save(); render(); };
+}
+
+function playerCard(p, pl, i, st) {
+  const T = p.rules.poolTarget;
+  const ws = pl.whists.map((v, j) => j !== i ? `на ${esc(p.players[j].name)}: ${fmt(v)}` : null).filter(Boolean).join("<br>");
+  return `<div class="pl ${i === p.dealer ? "dealer" : ""}"><h3>${esc(pl.name)}</h3>
+    <div class="kv"><span>Пуля из ${T}</span><b class="pool">${fmt(pl.pool)}</b></div><div class="bar"><i style="width:${Math.min(100, pl.pool / T * 100)}%"></i></div>
+    <div class="kv"><span>Гора</span><b class="gora">${fmt(pl.gora)}</b></div>
+    <div class="kv" style="display:block"><span>Висты</span><div class="wl">${ws}</div></div>
+    <div class="kv"><span>Итог сейчас</span><span class="total ${st.total > 0 ? "pos" : st.total < 0 ? "neg" : ""}">${st.total > 0 ? "+" : ""}${fmt(st.total)}</span></div></div>`;
+}
+
+function resultTable(res) {
+  const sorted = [...res].sort((a, b) => b.total - a.total);
+  return `<div class="tw"><table><thead><tr><th>Место</th><th>Игрок</th><th class="n">Итог, висты</th></tr></thead><tbody>${sorted.map((r, k) => `<tr><td>${k + 1}</td><td>${esc(r.name)}</td><td class="n total ${r.total > 0 ? "pos" : r.total < 0 ? "neg" : ""}">${r.total > 0 ? "+" : ""}${fmt(r.total)}</td></tr>`).join("")}</tbody></table></div>`;
+}
+
+function handTitle(p, h) {
+  const nm = (i) => p.players[i].name;
+  if (h.type === "raspas") return "Распасы";
+  if (h.type === "misere") return `${nm(h.declarer)}: мизер`;
+  const W = h.whist || {};
+  const ws = W.second === "half" ? (W.returned ? "полвиста, вист возвращён" : "полвиста") : [W.first, W.second].map((x) => x === "whist" ? "вист" : "пас").join("/");
+  return `${nm(h.declarer)}: ${h.contract} (${ws})`;
+}
+
+function opts(arr, val) { return arr.map(([v, t]) => `<option value="${v}" ${String(v) === String(val) ? "selected" : ""}>${esc(t)}</option>`).join(""); }
+
+function renderForm() {
+  const p = S.pulka, act = PREF.activeOrder(p), nm = (i) => p.players[i].name, R = p.rules;
+  let html = "";
+  if (F.type === "raspas") {
+    act.forEach((i) => { if (F.ras[i] === undefined) F.ras[i] = 0; });
+    html = `<div class="row2" style="grid-template-columns:repeat(3,1fr)">${act.map((i) => `<label class="f">${esc(nm(i))}<input type="number" min="0" max="10" id="ras${i}" value="${F.ras[i]}"></label>`).join("")}</div><p class="sub">Взяток на распасах, в сумме 10. Ступень прогрессии: ${Math.min(p.raspasStep + 1, R.raspasMaxStep)} (по ${R.raspasBase * Math.min(p.raspasStep + 1, R.raspasMaxStep)} в гору за взятку).</p>`;
+  } else {
+    html = `<label class="f">Играющий<select id="decl">${opts(act.map((i) => [i, nm(i)]), F.declarer)}</select></label>`;
+    if (F.type === "misere") {
+      html += `<label class="f">Взяток у играющего<input type="number" min="0" max="10" id="misT" value="${F.misT}"></label>`;
+    } else {
+      const [a, b] = PREF.defendersOf(p, F.declarer);
+      const lvl = PREF.levelOf(F.contract);
+      const halfOk = R.halfWhistLevels.includes(lvl) && F.first === "pass";
+      if (F.second === "half" && !halfOk) F.second = "pass";
+      const two = F.first === "whist" && F.second === "whist";
+      const someone = F.first === "whist" || F.second === "whist" || (F.second === "half" && F.returned);
+      html += `<label class="f">Контракт<select id="contract">${opts(PREF.CONTRACTS.filter((c) => c !== "мизер").map((c) => [c, c]), F.contract)}</select></label>
+        <div class="who">${esc(nm(a))} <span class="sub">— первый, слева от играющего</span></div>
+        <div class="seg">${[["whist","Вист"],["pass","Пас"]].map(([k,t]) => `<button type="button" id="f1-${k}" data-f1="${k}" aria-pressed="${F.first === k}">${t}</button>`).join("")}</div>
+        <div class="who">${esc(nm(b))} <span class="sub">— второй</span></div>
+        <div class="seg">${[["whist","Вист"],["pass","Пас"],["half","Полвиста"]].map(([k,t]) => `<button type="button" id="f2-${k}" data-f2="${k}" aria-pressed="${F.second === k}" ${k === "half" && !halfOk ? "disabled title=\"Полвиста — только если первый спасовал, на 6-й и 7-й играх\"" : ""}>${t}</button>`).join("")}</div>
+        ${F.second === "half" ? `<div class="seg"><button type="button" id="ret0" data-ret="0" aria-pressed="${!F.returned}">${esc(nm(a))} согласен</button><button type="button" id="ret1" data-ret="1" aria-pressed="${F.returned}">${esc(nm(a))} вернул вист</button></div>` : ""}
+        ${someone ? `<div class="row2"><label class="f">Взяток у играющего<input type="number" min="0" max="10" id="dt" value="${F.dt}"></label>
+          ${two ? `<label class="f">Взяток у ${esc(nm(a))}<input type="number" min="0" max="10" id="ta" value="${F.ta}"></label>` : ""}</div>
+          ${two ? `<p class="sub" id="tbInfo"></p>` : `<p class="sub">Вистует один — все взятки защиты (${10 - F.dt}) записываются ему.</p>`}` : `<p class="sub">Игру не вистовали — она засчитывается играющему без розыгрыша.</p>`}`;
+    }
+  }
+  $("#form").innerHTML = html;
+  const on = (sel, ev, fn) => document.querySelectorAll(sel).forEach((e) => e.addEventListener(ev, fn));
+  on("#decl", "change", (e) => { F.declarer = +e.target.value; renderForm(); });
+  on("#contract", "change", (e) => { F.contract = e.target.value; const l = PREF.levelOf(F.contract); F.dt = l; renderForm(); });
+  on("[data-f1]", "click", (e) => { F.first = e.currentTarget.dataset.f1; renderForm(); });
+  on("[data-f2]", "click", (e) => { F.second = e.currentTarget.dataset.f2; F.returned = false; renderForm(); });
+  on("[data-ret]", "click", (e) => { F.returned = e.currentTarget.dataset.ret === "1"; renderForm(); });
+  on("#dt", "input", (e) => { F.dt = +e.target.value; preview(); });
+  on("#ta", "input", (e) => { F.ta = +e.target.value; preview(); });
+  on("#misT", "input", (e) => { F.misT = +e.target.value; preview(); });
+  on("[id^=ras]", "input", (e) => { F.ras[e.target.id.slice(3)] = +e.target.value; preview(); });
+  preview();
+}
+
+function buildHand() {
+  const p = S.pulka;
+  if (F.type === "raspas") {
+    const t = {}; let sum = 0;
+    for (const i of PREF.activeOrder(p)) { const v = F.ras[i] | 0; if (v < 0 || v > 10) throw new Error("Взяток от 0 до 10"); t[i] = v; sum += v; }
+    if (sum !== 10) throw new Error(`Сумма взяток на распасах — ${sum}, должно быть 10`);
+    return { type: "raspas", tricks: t };
+  }
+  if (F.type === "misere") {
+    if (!(F.misT >= 0 && F.misT <= 10)) throw new Error("Взяток от 0 до 10");
+    return { type: "misere", declarer: F.declarer, tricks: F.misT | 0 };
+  }
+  const [a, b] = PREF.defendersOf(p, F.declarer);
+  const h = { type: "game", declarer: F.declarer, contract: F.contract, whist: { first: F.first, second: F.second, returned: F.returned }, tricks: {} };
+  if (!(F.dt >= 0 && F.dt <= 10)) throw new Error("Взяток у играющего — от 0 до 10");
+  h.tricks[F.declarer] = F.dt | 0;
+  if (F.first === "whist" && F.second === "whist") {
+    const rest = 10 - F.dt;
+    if (!(F.ta >= 0 && F.ta <= rest)) throw new Error(`У ${p.players[a].name} может быть от 0 до ${rest} взяток`);
+    h.tricks[a] = F.ta | 0; h.tricks[b] = rest - F.ta;
+  }
+  return h;
+}
+
+function preview() {
+  const box = $("#preview"), err = $("#formErr"), btn = $("#write");
+  err.textContent = "";
+  try {
+    const h = buildHand();
+    const d = PREF.score(S.pulka, h);
+    if (F.type === "game" && F.first === "whist" && F.second === "whist") { const ti = $("#tbInfo"); if (ti) ti.textContent = `У ${S.pulka.players[PREF.defendersOf(S.pulka, F.declarer)[1]].name} — ${h.tricks[PREF.defendersOf(S.pulka, F.declarer)[1]]}`; }
+    box.textContent = d.notes.join("\n") || "Ничего не записывается";
+    btn.disabled = false;
+  } catch (e) { box.textContent = ""; err.textContent = e.message; btn.disabled = true; }
+}
+
+function write() {
+  try {
+    const h = buildHand();
+    PREF.apply(S.pulka, h);
+    F = { type: "game", declarer: null, contract: F.contract, first: "whist", second: "pass", returned: false, dt: PREF.levelOf(F.contract) || 6, ta: 0, misT: 0, ras: {} };
+    save(); render();
+  } catch (e) { $("#formErr").textContent = e.message; }
+}
+
+/* ---------- рейтинг ---------- */
+function renderRating() {
+  const rows = Object.entries(S.ratings).sort((a, b) => b[1].rating - a[1].rating);
+  $("#view").innerHTML = `<div class="box"><h2>Рейтинг игроков</h2>
+    ${rows.length ? `<div class="tw"><table><thead><tr><th>#</th><th>Игрок</th><th class="n">Рейтинг</th><th class="n">Пулек</th><th class="n">Побед</th><th class="n">Лучший итог</th><th class="n">Средний итог</th></tr></thead><tbody>
+    ${rows.map(([n, r], k) => `<tr><td>${k + 1}</td><td>${esc(n)}</td><td class="n">${r.rating}</td><td class="n">${r.pulkas}</td><td class="n">${r.wins}</td><td class="n">${fmt(r.best)}</td><td class="n">${fmt(r.sum / r.pulkas)}</td></tr>`).join("")}</tbody></table></div>
+    <p class="sub">Рейтинг считается по системе Эло после каждой закрытой пульки: игроки сравниваются попарно по итогу в вистах. Старт — 1500.</p>` : `<p class="sub">Рейтинг появится после первой закрытой пульки, записанной кнопкой «Записать в рейтинг».</p>`}</div>
+  <div class="box sec"><h2>Рекорды пулек</h2>${S.saved.length ? `<div class="tw"><table><thead><tr><th>Дата</th><th>Победитель</th><th class="n">Итог</th><th>Участники</th></tr></thead><tbody>
+    ${[...S.saved].sort((a, b) => Math.max(...b.result.map((r) => r.total)) - Math.max(...a.result.map((r) => r.total))).slice(0, 20).map((s) => { const w = [...s.result].sort((a, b) => b.total - a.total)[0]; return `<tr><td>${new Date(s.at).toLocaleDateString("ru-RU")}</td><td>${esc(w.name)}</td><td class="n">+${fmt(w.total)}</td><td>${s.result.map((r) => esc(r.name)).join(", ")}</td></tr>`; }).join("")}</tbody></table></div>` : `<p class="sub">Здесь будут лучшие результаты закрытых пулек.</p>`}
+    ${rows.length ? `<p><button type="button" class="btn ghost" id="clr">Очистить рейтинг</button> <span class="sub" id="clrc"></span></p>` : ""}</div>
+    <p class="sub">Данные хранятся в этом браузере.</p>`;
+  let armed = false;
+  $("#clr") && ($("#clr").onclick = () => { if (!armed) { armed = true; $("#clrc").textContent = "Нажмите ещё раз для подтверждения"; return; } S.ratings = {}; S.saved = []; save(); render(); });
+}
+
+function renderHelp() {
+  const R = S.pulka ? S.pulka.rules : PREF.DEFAULT_RULES;
+  $("#view").innerHTML = `<div class="box"><h2>Как считается запись</h2><div class="tw"><table><thead><tr><th>Игра</th><th class="n">В пулю</th><th class="n">Вист за взятку</th><th class="n">Гора за недобор</th><th class="n">Консоляция за недобор</th><th class="n">Обязательно вистующим</th></tr></thead><tbody>
+    ${[6,7,8,9,10].map((l) => `<tr><td>${l}</td><td class="n">${R.cost[l]}</td><td class="n">${R.cost[l] * R.whistMult}</td><td class="n">${R.cost[l] * R.goraMult}</td><td class="n">${R.cost[l] * R.consolationMult}</td><td class="n">${R.whistNeed[l]}</td></tr>`).join("")}
+    <tr><td>Мизер</td><td class="n">${R.misere}</td><td class="n">—</td><td class="n">${R.misereGoraPerTrick} за взятку</td><td class="n">—</td><td class="n">—</td></tr></tbody></table></div>
+    <ul>
+      <li><b>Джентльменский вист.</b> Если вистует один, а второй пасует, и играющий недобрал, висты за взятки защиты делятся пополам между вистующим и пасовавшим. Если игра сыграна, все висты пишет вистующий.</li>
+      <li><b>Консоляция</b> при недоборе пишется обоим защитникам, в том числе пасовавшему.</li>
+      <li><b>Полуответственный вист.</b> Если вистующие не взяли обязательное число взяток, вистующему в гору пишется по ${R.whistPenaltyMult === 1 ? "стоимости игры" : R.whistPenaltyMult + " × стоимости"} за каждую недобранную. При двух вистующих каждый отвечает за половину.</li>
+      <li><b>Полвиста</b> (6-я и 7-я игры): первый пасует, второй говорит «полвиста» — игра засчитывается без розыгрыша, сказавший пишет висты за половину обязательных взяток. Первый может вернуть вист — тогда вистует он, а второй становится пасующим.</li>
+      <li><b>Распасы</b>: каждая взятка — в гору по ${R.raspasBase}, при распасах подряд цена растёт: ${R.raspasBase}, ${R.raspasBase * 2}, ${R.raspasBase * 3}. Ни одной взятки — +${R.raspasZeroBonus} в пулю (× ступень).</li>
+      <li><b>Итог</b>: недописанная до ${R.poolTarget} пуля переводится в гору (очко пули = ${R.poolToGora} очка горы). Гора пересчитывается в висты (очко = ${R.whistPerGora} вистов) относительно средней, к ней прибавляется разница вистов с каждым партнёром. Сумма итогов всех игроков равна нулю.</li>
+      <li><b>Вчетвером</b> сдающий не играет в раздаче и не пишет висты.</li>
+    </ul><p class="sub">Ставки можно изменить при создании пульки в разделе «Ставки и правила».</p></div>`;
+}
+
+render();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "preferans-leningradka",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Преферанс «Ленинградка»: запись пули и игра с ботами",
+  "scripts": {
+    "build": "node scripts/build.js",
+    "test": "node tests/engine.test.js && node tests/autoplay.test.js && node tests/human.test.js"
+  },
+  "devDependencies": { "playwright": "^1.47.0" }
+}
