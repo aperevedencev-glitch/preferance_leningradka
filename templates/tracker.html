@@ -66,6 +66,7 @@ details summary{cursor:pointer;color:var(--muted);font-size:13.5px;margin-top:6p
 .sec{margin-top:18px}
 :focus-visible{outline:2px solid var(--pool);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+.rr{padding-left:22px;margin:8px 0 12px}.rr li{margin:6px 0;max-width:72ch}.rt td,.rt th{white-space:normal}.rr+h3,.rt+h3{font-size:15px;margin:14px 0 6px}
 </style>
 
 <div class="wrap">
@@ -75,6 +76,7 @@ details summary{cursor:pointer;color:var(--muted);font-size:13.5px;margin-top:6p
       <button type="button" id="t-game" data-t="game" aria-pressed="true">Пулька</button>
       <button type="button" id="t-rating" data-t="rating" aria-pressed="false">Рейтинг и рекорды</button>
       <button type="button" id="t-help" data-t="help" aria-pressed="false">Правила записи</button>
+      <button type="button" id="t-raspas" data-t="raspas" aria-pressed="false">Правила распасов</button>
     </nav>
   </header>
   <main id="view"></main>
@@ -98,6 +100,7 @@ function render() {
   document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.t === S.tab));
   if (S.tab === "rating") return renderRating();
   if (S.tab === "help") return renderHelp();
+  if (S.tab === "raspas") return renderRaspasRules();
   if (!S.pulka) return renderSetup();
   renderGame();
 }
@@ -309,6 +312,10 @@ function renderRating() {
   $("#clr") && ($("#clr").onclick = () => { if (!armed) { armed = true; $("#clrc").textContent = "Нажмите ещё раз для подтверждения"; return; } S.ratings = {}; S.saved = []; save(); render(); });
 }
 
+function renderRaspasRules() {
+  $("#view").innerHTML = `<div class="box">${PREF.raspasRulesHTML(S.pulka ? S.pulka.rules : PREF.DEFAULT_RULES)}</div>`;
+}
+
 function renderHelp() {
   const R = S.pulka ? S.pulka.rules : PREF.DEFAULT_RULES;
   $("#view").innerHTML = `<div class="box"><h2>Как считается запись</h2><div class="tw"><table><thead><tr><th>Игра</th><th class="n">В пулю</th><th class="n">Вист за взятку</th><th class="n">Гора за недобор</th><th class="n">Консоляция за недобор</th><th class="n">Обязательно вистующим</th></tr></thead><tbody>
@@ -319,7 +326,7 @@ function renderHelp() {
       <li><b>Консоляция</b> при недоборе пишется обоим защитникам, в том числе пасовавшему.</li>
       <li><b>Полуответственный вист.</b> Если вистующие не взяли обязательное число взяток, вистующему в гору пишется по ${R.whistPenaltyMult === 1 ? "стоимости игры" : R.whistPenaltyMult + " × стоимости"} за каждую недобранную. При двух вистующих каждый отвечает за половину.</li>
       <li><b>Полвиста</b> (6-я и 7-я игры): первый пасует, второй говорит «полвиста» — игра засчитывается без розыгрыша, сказавший пишет висты за половину обязательных взяток. Первый может вернуть вист — тогда вистует он, а второй становится пасующим.</li>
-      <li><b>Распасы</b>: каждая взятка — в гору по ${R.raspasBase}, при распасах подряд цена растёт: ${R.raspasBase}, ${R.raspasBase * 2}, ${R.raspasBase * 3}. Ни одной взятки — +${R.raspasZeroBonus} в пулю (× ступень).</li>
+      <li><b>Распасы</b>: каждая взятка — в гору по ${R.raspasBase}, при распасах подряд цена растёт: ${R.raspasBase}, ${R.raspasBase * 2}, ${R.raspasBase * 3}. Ни одной взятки — +${R.raspasZeroBonus} в пулю (× ступень). Выход из распасов — во вкладке «Правила распасов».</li>
       <li><b>Итог</b>: недописанная до ${R.poolTarget} пуля переводится в гору (очко пули = ${R.poolToGora} очка горы). Гора пересчитывается в висты (очко = ${R.whistPerGora} вистов) относительно средней, к ней прибавляется разница вистов с каждым партнёром. Сумма итогов всех игроков равна нулю.</li>
       <li><b>Вчетвером</b> сдающий не играет в раздаче и не пишет висты.</li>
     </ul><p class="sub">Ставки можно изменить при создании пульки в разделе «Ставки и правила».</p></div>`;

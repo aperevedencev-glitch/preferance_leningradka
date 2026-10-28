@@ -70,12 +70,13 @@ td.n,th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-
 :focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 @media (max-width:520px){.card{width:46px;height:68px;font-size:14px}.card .big{font-size:20px}.table{padding:10px;border-width:7px}}
 @media (prefers-reduced-motion:reduce){.hand .card{transform:none!important}}
+.tw{overflow-x:auto}.rr{padding-left:22px;margin:8px 0 12px}.rr li{margin:6px 0;max-width:72ch}.rt td,.rt th{white-space:normal}.rr+h3,.rt+h3{font-size:15px;margin:14px 0 6px}
 </style>
 
 <div class="wrap">
   <header>
     <div><h1>Ленинградка за столом</h1><div class="sub">Раздача, торговля, прикуп, вист и розыгрыш против двух или трёх ботов, с записью пули и рейтингом</div></div>
-    <nav class="tabs" aria-label="Разделы"><button type="button" id="tab-play" data-t="play" aria-pressed="true">Игра</button><button type="button" id="tab-rating" data-t="rating" aria-pressed="false">Рейтинг</button></nav>
+    <nav class="tabs" aria-label="Разделы"><button type="button" id="tab-play" data-t="play" aria-pressed="true">Игра</button><button type="button" id="tab-rating" data-t="rating" aria-pressed="false">Рейтинг</button><button type="button" id="tab-raspas" data-t="raspas" aria-pressed="false">Правила распасов</button></nav>
   </header>
   <div id="view"></div>
 </div>
@@ -316,6 +317,7 @@ async function loop() {
 function draw() {
   document.querySelectorAll(".tabs button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.t === tab));
   if (tab === "rating") return ratingView();
+  if (tab === "raspas") { $("#view").innerHTML = `<div class="panel">${PREF.raspasRulesHTML(G ? G.pulka.rules : PREF.DEFAULT_RULES)}</div>`; return; }
   if (!G) return setupView();
   const d = G.d, p = G.pulka, n = p.players.length;
   const seatsAround = []; for (let k = 1; k < n; k++) seatsAround.push((G.human + k) % n);

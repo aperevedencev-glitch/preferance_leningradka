@@ -241,6 +241,40 @@ const PREF = (() => {
     return delta;
   }
 
-  return { DEFAULT_RULES, SUITS, CONTRACTS, contractRank, levelOf, trumpOf, newPulka, activeOrder, defendersOf, exitLevel, nextRaspas, score, apply, undo, isFinished, settle, updateRatings };
+  /* Инструкция «Правила распасов» (HTML) — по текущим ставкам пульки */
+  function raspasRulesHTML(R = DEFAULT_RULES) {
+    const ex = R.raspasExit || [7, 8, 6], cyc = R.raspasCycle || 3, base = R.raspasBase, mx = R.raspasMaxStep;
+    const g = (k) => base * Math.min(k, mx);
+    const ord = ["первых", "вторых", "третьих", "четвёртых", "пятых"];
+    const exRows = [`<tr><td>После сыгранной игры или мизера</td><td class="n">—</td><td class="n"><b>6-я</b></td></tr>`]
+      .concat(Array.from({ length: cyc }, (_, i) => `<tr><td>После ${ord[i] || i + 1 + "-х"} распасов${i ? " подряд" : ""}</td><td class="n">${g(i + 1)}</td><td class="n"><b>${ex[Math.min(i, ex.length - 1)]}-я</b>${i === cyc - 1 ? "<br><span class=\"sub\">автоматически</span>" : ""}</td></tr>`));
+    // пример цепочки сдач
+    const seq = ["распасы", "распасы", "распасы", "распасы", "игра", "распасы", "мизер"];
+    let st = 0;
+    const exRow = seq.map((t, k) => {
+      const lvl = st > 0 ? ex[Math.min(st, ex.length) - 1] : 6;
+      const next = t === "распасы" ? (st >= cyc ? 1 : st + 1) : 0;
+      const row = `<tr><td class="n">${k + 1}</td><td class="n">${lvl}-я</td><td>${t}</td><td class="n">${t === "распасы" ? g(next) : "—"}</td><td class="n">${next}</td></tr>`;
+      st = next; return row;
+    }).join("");
+    return `<h2>Правила распасов</h2>
+<ol class="rr">
+  <li><b>Когда.</b> Если в торговле спасовали все трое, сдача играется на распасах.${" "}Вчетвером сдающий не играет.</li>
+  <li><b>Как играть.</b> Каждый играет сам за себя и старается взять как можно меньше взяток. Козыря нет: ходят в масть, а если масти нет — любой картой. Прикуп в розыгрыше не участвует.</li>
+  <li><b>Запись.</b> Каждая взятка пишется в гору по ${base} × ступень распасов. Кто не взял ни одной взятки, получает ${R.raspasZeroBonus} × ступень в пулю.</li>
+  <li><b>Ступень</b> — какие по счёту распасы подряд: первые — ${g(1)} за взятку, вторые — ${g(2)}, третьи — ${g(3)}${mx < 3 ? " (прогрессия ограничена " + mx + "-й ступенью)" : ""}.</li>
+  <li><b>Выход из распасов.</b> В сдаче после распасов играть можно только игру не ниже указанной в таблице. Торговля начинается с этой игры; ниже заявить и записать нельзя.</li>
+</ol>
+<div class="tw rt"><table><thead><tr><th>Ситуация</th><th class="n">Гора за взятку</th><th class="n">Следующая игра не ниже</th></tr></thead><tbody>${exRows.join("")}</tbody></table></div>
+<ol class="rr" start="6">
+  <li><b>Сброс счёта.</b> После сыгранной игры или мизера счёт распасов обнуляется. После ${ord[cyc - 1] || cyc + "-х"} распасов подряд выход автоматический — обычная торговля с 6-й, а если и эта сдача уйдёт в распасы, они снова считаются первыми.</li>
+  <li><b>Мизер</b> можно заявить при любом выходе: по старшинству он выше любой 8-й игры.</li>
+  <li>Если при выходе все снова спасуют — снова распасы, и счёт распасов подряд продолжается.</li>
+</ol>
+<h3>Пример</h3>
+<div class="tw rt"><table><thead><tr><th class="n">Сдача</th><th class="n">Игра не ниже</th><th>Исход</th><th class="n">Гора за взятку</th><th class="n">Распасов подряд</th></tr></thead><tbody>${exRow}</tbody></table></div>`;
+  }
+
+  return { DEFAULT_RULES, raspasRulesHTML, SUITS, CONTRACTS, contractRank, levelOf, trumpOf, newPulka, activeOrder, defendersOf, exitLevel, nextRaspas, score, apply, undo, isFinished, settle, updateRatings };
 })();
 if (typeof module !== "undefined") module.exports = PREF;
