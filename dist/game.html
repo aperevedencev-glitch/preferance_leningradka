@@ -106,6 +106,8 @@ const PREF = (() => {
     raspasBase: 2,             // распасы: гора за взятку = 2, 4, 6…
     raspasMaxStep: 3,          // прогрессия до 3-й ступени
     raspasZeroBonus: 1,        // в пулю за 0 взяток на распасах (× ступень)
+    raspasExit: [6, 7, 8],     // выход из 1-х, 2-х, 3-х распасов подряд: минимальная игра
+    raspasCycle: 3,            // после стольких распасов подряд счёт начинается заново
     poolToGora: 2,             // очко пули = 2 очка горы при расчёте
     whistPerGora: 10,          // очко горы = 10 вистов
     poolTarget: 20,            // пуля каждому
@@ -119,6 +121,18 @@ const PREF = (() => {
   const contractRank = (c) => CONTRACTS.indexOf(c);
   const levelOf = (c) => (c === "мизер" ? 0 : parseInt(c, 10));
   const trumpOf = (c) => (c === "мизер" ? null : c.replace(/^\d+/, "") === "БК" ? null : c.replace(/^\d+/, ""));
+
+  // номер распасов подряд, если и эта сдача уйдёт в распасы (после цикла — снова 1-е)
+  function nextRaspas(p) {
+    const c = p.rules.raspasCycle || 3;
+    return p.raspasStep >= c ? 1 : p.raspasStep + 1;
+  }
+
+  // минимальная игра в этой сдаче: выход из распасов (после игры — 6)
+  function exitLevel(p) {
+    const ex = p.rules.raspasExit || [6, 6, 6];
+    return p.raspasStep > 0 ? ex[Math.min(p.raspasStep, ex.length) - 1] : 6;
+  }
 
   function newPulka(names, rules = DEFAULT_RULES) {
     const n = names.length;
@@ -164,8 +178,8 @@ const PREF = (() => {
     const name = (i) => p.players[i].name;
 
     if (h.type === "raspas") {
-      const step = Math.min(p.raspasStep + 1, R.raspasMaxStep);
-      d.raspasStep = p.raspasStep + 1;
+      d.raspasStep = nextRaspas(p);
+      const step = Math.min(d.raspasStep, R.raspasMaxStep);
       for (const [i, t] of Object.entries(h.tricks)) {
         if (t > 0) { d.gora[i] += t * R.raspasBase * step; d.notes.push(`${name(i)}: ${t} взят. на распасах → гора +${t * R.raspasBase * step}`); }
         else if (R.raspasZeroBonus) { d.pool[i] += R.raspasZeroBonus * step; d.notes.push(`${name(i)}: ни одной взятки → пуля +${R.raspasZeroBonus * step}`); }
@@ -182,6 +196,8 @@ const PREF = (() => {
 
     // обычная игра
     const lvl = levelOf(h.contract);
+    const ex = exitLevel(p);
+    if (lvl < ex) throw new Error(`Выход из распасов: игра не ниже ${ex}-й`);
     const cost = R.cost[lvl];
     const decl = h.declarer;
     const [a, b] = defendersOf(p, decl);
@@ -315,7 +331,7 @@ const PREF = (() => {
     return delta;
   }
 
-  return { DEFAULT_RULES, SUITS, CONTRACTS, contractRank, levelOf, trumpOf, newPulka, activeOrder, defendersOf, score, apply, undo, isFinished, settle, updateRatings };
+  return { DEFAULT_RULES, SUITS, CONTRACTS, contractRank, levelOf, trumpOf, newPulka, activeOrder, defendersOf, exitLevel, nextRaspas, score, apply, undo, isFinished, settle, updateRatings };
 })();
 
 /* ===== Карты, торговля, розыгрыш и простые боты ===== */
@@ -410,15 +426,15 @@ const CARDS = (() => {
   }
 
   // ставка бота: строка контракта или null (пас)
-  function botBid(hand, current, canMisere) {
+  function botBid(hand, current, canMisere, minLevel = 6) {
     if (canMisere && misereSafe(hand) && contractRank(current) < contractRank("мизер")) return "мизер";
     const b = bestContract(hand);
     const level = Math.min(10, Math.floor(b.est + 1.5)); // с учётом прикупа
-    if (level < 6) return null;
+    if (level < minLevel) return null;
     const order = CONTRACTS.filter((c) => c !== "мизер");
     // минимальная ставка выше текущей в пределах уровня
     for (const c of order) {
-      if (contractRank(c) <= contractRank(current)) continue;
+      if (contractRank(c) <= contractRank(current) || parseInt(c) < minLevel) continue;
       if (parseInt(c) > level) break;
       return c;
     }
@@ -553,7 +569,7 @@ function newDeal() {
   G.d = { act, dealer: G.pulka.dealer, hands: {}, prikup, phase: "bid", bid: { turn: 0, current: null, passed: [], bidders: [], last: null }, declarer: null, contract: null,
           whist: {}, trick: [], tricks: {}, lead: act[0], showPrikup: false, discard: [], result: null };
   act.forEach((s, k) => { G.d.hands[s] = hands[k]; G.d.tricks[s] = 0; });
-  addLog(`— Раздача ${G.pulka.hands.length + 1}. Сдаёт ${nm(G.pulka.dealer)}.`);
+  addLog(`— Раздача ${G.pulka.hands.length + 1}. Сдаёт ${nm(G.pulka.dealer)}.${G.pulka.raspasStep ? ` Распасов подряд: ${G.pulka.raspasStep}, выход — не ниже ${PREF.exitLevel(G.pulka)}-й.` : ""}`);
   draw(); loop();
 }
 
@@ -704,7 +720,7 @@ async function loop() {
         const seat = d.act[d.bid.turn];
         if (seat === G.human && !G.auto) break;
         await sleep(BOT_DELAY);
-        makeBid(seat, CARDS.botBid(d.hands[seat], d.bid.current, !d.bid.bidders.includes(seat)));
+        makeBid(seat, CARDS.botBid(d.hands[seat], d.bid.current, !d.bid.bidders.includes(seat), PREF.exitLevel(G.pulka)));
       } else if (d.phase === "prikup") {
         if (d.declarer === G.human && !G.auto) break;
         await sleep(BOT_DELAY * 2);
@@ -795,8 +811,9 @@ function controls() {
   const d = G.d, me = G.human;
   if (d.phase === "bid" && d.act[d.bid.turn] === me) {
     const canMis = !d.bid.bidders.includes(me);
-    const avail = PREF.CONTRACTS.filter((c) => CARDS.contractRank(c) > CARDS.contractRank(d.bid.current) && (c !== "мизер" || canMis));
-    return `<h2>Торговля</h2><p class="sub">Текущая ставка: ${esc(d.bid.current || "нет")}</p>
+    const ex = PREF.exitLevel(G.pulka);
+    const avail = PREF.CONTRACTS.filter((c) => CARDS.contractRank(c) > CARDS.contractRank(d.bid.current) && (c === "мизер" ? canMis : parseInt(c) >= ex));
+    return `<h2>Торговля</h2><p class="sub">Текущая ставка: ${esc(d.bid.current || "нет")}${ex > 6 ? ` · выход из распасов: не ниже ${ex}-й` : ""}</p>
       <div class="btns">${avail.slice(0, 4).map((c) => `<button type="button" class="b" data-bid="${c}">${c}</button>`).join("")}</div>
       <label class="f">Другая ставка<select id="bidSel">${avail.map((c) => `<option>${c}</option>`).join("")}</select></label>
       <div class="btns"><button type="button" class="g" id="bidOther">Сказать выбранное</button><button type="button" class="g" data-bid="">Пас</button></div>`;

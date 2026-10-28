@@ -90,15 +90,15 @@ const CARDS = (() => {
   }
 
   // ставка бота: строка контракта или null (пас)
-  function botBid(hand, current, canMisere) {
+  function botBid(hand, current, canMisere, minLevel = 6) {
     if (canMisere && misereSafe(hand) && contractRank(current) < contractRank("мизер")) return "мизер";
     const b = bestContract(hand);
     const level = Math.min(10, Math.floor(b.est + 1.5)); // с учётом прикупа
-    if (level < 6) return null;
+    if (level < minLevel) return null;
     const order = CONTRACTS.filter((c) => c !== "мизер");
     // минимальная ставка выше текущей в пределах уровня
     for (const c of order) {
-      if (contractRank(c) <= contractRank(current)) continue;
+      if (contractRank(c) <= contractRank(current) || parseInt(c) < minLevel) continue;
       if (parseInt(c) > level) break;
       return c;
     }

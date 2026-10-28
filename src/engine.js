@@ -16,6 +16,8 @@ const PREF = (() => {
     raspasBase: 2,             // распасы: гора за взятку = 2, 4, 6…
     raspasMaxStep: 3,          // прогрессия до 3-й ступени
     raspasZeroBonus: 1,        // в пулю за 0 взяток на распасах (× ступень)
+    raspasExit: [6, 7, 8],     // выход из 1-х, 2-х, 3-х распасов подряд: минимальная игра
+    raspasCycle: 3,            // после стольких распасов подряд счёт начинается заново
     poolToGora: 2,             // очко пули = 2 очка горы при расчёте
     whistPerGora: 10,          // очко горы = 10 вистов
     poolTarget: 20,            // пуля каждому
@@ -29,6 +31,18 @@ const PREF = (() => {
   const contractRank = (c) => CONTRACTS.indexOf(c);
   const levelOf = (c) => (c === "мизер" ? 0 : parseInt(c, 10));
   const trumpOf = (c) => (c === "мизер" ? null : c.replace(/^\d+/, "") === "БК" ? null : c.replace(/^\d+/, ""));
+
+  // номер распасов подряд, если и эта сдача уйдёт в распасы (после цикла — снова 1-е)
+  function nextRaspas(p) {
+    const c = p.rules.raspasCycle || 3;
+    return p.raspasStep >= c ? 1 : p.raspasStep + 1;
+  }
+
+  // минимальная игра в этой сдаче: выход из распасов (после игры — 6)
+  function exitLevel(p) {
+    const ex = p.rules.raspasExit || [6, 6, 6];
+    return p.raspasStep > 0 ? ex[Math.min(p.raspasStep, ex.length) - 1] : 6;
+  }
 
   function newPulka(names, rules = DEFAULT_RULES) {
     const n = names.length;
@@ -74,8 +88,8 @@ const PREF = (() => {
     const name = (i) => p.players[i].name;
 
     if (h.type === "raspas") {
-      const step = Math.min(p.raspasStep + 1, R.raspasMaxStep);
-      d.raspasStep = p.raspasStep + 1;
+      d.raspasStep = nextRaspas(p);
+      const step = Math.min(d.raspasStep, R.raspasMaxStep);
       for (const [i, t] of Object.entries(h.tricks)) {
         if (t > 0) { d.gora[i] += t * R.raspasBase * step; d.notes.push(`${name(i)}: ${t} взят. на распасах → гора +${t * R.raspasBase * step}`); }
         else if (R.raspasZeroBonus) { d.pool[i] += R.raspasZeroBonus * step; d.notes.push(`${name(i)}: ни одной взятки → пуля +${R.raspasZeroBonus * step}`); }
@@ -92,6 +106,8 @@ const PREF = (() => {
 
     // обычная игра
     const lvl = levelOf(h.contract);
+    const ex = exitLevel(p);
+    if (lvl < ex) throw new Error(`Выход из распасов: игра не ниже ${ex}-й`);
     const cost = R.cost[lvl];
     const decl = h.declarer;
     const [a, b] = defendersOf(p, decl);
@@ -225,6 +241,6 @@ const PREF = (() => {
     return delta;
   }
 
-  return { DEFAULT_RULES, SUITS, CONTRACTS, contractRank, levelOf, trumpOf, newPulka, activeOrder, defendersOf, score, apply, undo, isFinished, settle, updateRatings };
+  return { DEFAULT_RULES, SUITS, CONTRACTS, contractRank, levelOf, trumpOf, newPulka, activeOrder, defendersOf, exitLevel, nextRaspas, score, apply, undo, isFinished, settle, updateRatings };
 })();
 if (typeof module !== "undefined") module.exports = PREF;

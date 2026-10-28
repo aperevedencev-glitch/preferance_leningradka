@@ -148,7 +148,7 @@ function renderGame() {
   <div class="grid">
     <div class="box" ${p.closed ? 'hidden' : ''}>
       <h2>Раздача ${p.hands.length + 1}</h2>
-      <div class="sub" style="margin:-4px 0 8px">Сдаёт: ${esc(p.players[p.dealer].name)}${n === 4 ? " (не играет)" : ""}${p.raspasStep ? ` · распасов подряд: ${p.raspasStep}` : ""}</div>
+      <div class="sub" style="margin:-4px 0 8px">Сдаёт: ${esc(p.players[p.dealer].name)}${n === 4 ? " (не играет)" : ""}${p.raspasStep ? ` · распасов подряд: ${p.raspasStep}, выход — не ниже ${PREF.exitLevel(p)}-й` : ""}</div>
       <div class="seg" role="group" aria-label="Что игралось">
         ${[["game","Игра"],["misere","Мизер"],["raspas","Распасы"]].map(([k,t]) => `<button type="button" id="ty-${k}" data-ty="${k}" aria-pressed="${F.type === k}">${t}</button>`).join("")}
       </div>
@@ -210,19 +210,21 @@ function renderForm() {
   let html = "";
   if (F.type === "raspas") {
     act.forEach((i) => { if (F.ras[i] === undefined) F.ras[i] = 0; });
-    html = `<div class="row2" style="grid-template-columns:repeat(3,1fr)">${act.map((i) => `<label class="f">${esc(nm(i))}<input type="number" min="0" max="10" id="ras${i}" value="${F.ras[i]}"></label>`).join("")}</div><p class="sub">Взяток на распасах, в сумме 10. Ступень прогрессии: ${Math.min(p.raspasStep + 1, R.raspasMaxStep)} (по ${R.raspasBase * Math.min(p.raspasStep + 1, R.raspasMaxStep)} в гору за взятку).</p>`;
+    html = `<div class="row2" style="grid-template-columns:repeat(3,1fr)">${act.map((i) => `<label class="f">${esc(nm(i))}<input type="number" min="0" max="10" id="ras${i}" value="${F.ras[i]}"></label>`).join("")}</div><p class="sub">Взяток на распасах, в сумме 10. Ступень прогрессии: ${Math.min(PREF.nextRaspas(p), R.raspasMaxStep)} (по ${R.raspasBase * Math.min(PREF.nextRaspas(p), R.raspasMaxStep)} в гору за взятку).</p>`;
   } else {
     html = `<label class="f">Играющий<select id="decl">${opts(act.map((i) => [i, nm(i)]), F.declarer)}</select></label>`;
     if (F.type === "misere") {
       html += `<label class="f">Взяток у играющего<input type="number" min="0" max="10" id="misT" value="${F.misT}"></label>`;
     } else {
+      const ex = PREF.exitLevel(p);
+      if (PREF.levelOf(F.contract) < ex) { F.contract = ex + "♠"; F.dt = ex; }
       const [a, b] = PREF.defendersOf(p, F.declarer);
       const lvl = PREF.levelOf(F.contract);
       const halfOk = R.halfWhistLevels.includes(lvl) && F.first === "pass";
       if (F.second === "half" && !halfOk) F.second = "pass";
       const two = F.first === "whist" && F.second === "whist";
       const someone = F.first === "whist" || F.second === "whist" || (F.second === "half" && F.returned);
-      html += `<label class="f">Контракт<select id="contract">${opts(PREF.CONTRACTS.filter((c) => c !== "мизер").map((c) => [c, c]), F.contract)}</select></label>
+      html += `<label class="f">Контракт<select id="contract">${opts(PREF.CONTRACTS.filter((c) => c !== "мизер" && parseInt(c) >= PREF.exitLevel(p)).map((c) => [c, c]), F.contract)}</select></label>
         <div class="who">${esc(nm(a))} <span class="sub">— первый, слева от играющего</span></div>
         <div class="seg">${[["whist","Вист"],["pass","Пас"]].map(([k,t]) => `<button type="button" id="f1-${k}" data-f1="${k}" aria-pressed="${F.first === k}">${t}</button>`).join("")}</div>
         <div class="who">${esc(nm(b))} <span class="sub">— второй</span></div>

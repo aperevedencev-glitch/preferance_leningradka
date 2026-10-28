@@ -133,7 +133,7 @@ function newDeal() {
   G.d = { act, dealer: G.pulka.dealer, hands: {}, prikup, phase: "bid", bid: { turn: 0, current: null, passed: [], bidders: [], last: null }, declarer: null, contract: null,
           whist: {}, trick: [], tricks: {}, lead: act[0], showPrikup: false, discard: [], result: null };
   act.forEach((s, k) => { G.d.hands[s] = hands[k]; G.d.tricks[s] = 0; });
-  addLog(`— Раздача ${G.pulka.hands.length + 1}. Сдаёт ${nm(G.pulka.dealer)}.`);
+  addLog(`— Раздача ${G.pulka.hands.length + 1}. Сдаёт ${nm(G.pulka.dealer)}.${G.pulka.raspasStep ? ` Распасов подряд: ${G.pulka.raspasStep}, выход — не ниже ${PREF.exitLevel(G.pulka)}-й.` : ""}`);
   draw(); loop();
 }
 
@@ -284,7 +284,7 @@ async function loop() {
         const seat = d.act[d.bid.turn];
         if (seat === G.human && !G.auto) break;
         await sleep(BOT_DELAY);
-        makeBid(seat, CARDS.botBid(d.hands[seat], d.bid.current, !d.bid.bidders.includes(seat)));
+        makeBid(seat, CARDS.botBid(d.hands[seat], d.bid.current, !d.bid.bidders.includes(seat), PREF.exitLevel(G.pulka)));
       } else if (d.phase === "prikup") {
         if (d.declarer === G.human && !G.auto) break;
         await sleep(BOT_DELAY * 2);
@@ -375,8 +375,9 @@ function controls() {
   const d = G.d, me = G.human;
   if (d.phase === "bid" && d.act[d.bid.turn] === me) {
     const canMis = !d.bid.bidders.includes(me);
-    const avail = PREF.CONTRACTS.filter((c) => CARDS.contractRank(c) > CARDS.contractRank(d.bid.current) && (c !== "мизер" || canMis));
-    return `<h2>Торговля</h2><p class="sub">Текущая ставка: ${esc(d.bid.current || "нет")}</p>
+    const ex = PREF.exitLevel(G.pulka);
+    const avail = PREF.CONTRACTS.filter((c) => CARDS.contractRank(c) > CARDS.contractRank(d.bid.current) && (c === "мизер" ? canMis : parseInt(c) >= ex));
+    return `<h2>Торговля</h2><p class="sub">Текущая ставка: ${esc(d.bid.current || "нет")}${ex > 6 ? ` · выход из распасов: не ниже ${ex}-й` : ""}</p>
       <div class="btns">${avail.slice(0, 4).map((c) => `<button type="button" class="b" data-bid="${c}">${c}</button>`).join("")}</div>
       <label class="f">Другая ставка<select id="bidSel">${avail.map((c) => `<option>${c}</option>`).join("")}</select></label>
       <div class="btns"><button type="button" class="g" id="bidOther">Сказать выбранное</button><button type="button" class="g" data-bid="">Пас</button></div>`;
