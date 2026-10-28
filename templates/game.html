@@ -272,7 +272,7 @@ function afterTrick() {
   if (d.raspas && d.prk !== undefined && d.prk < 2) {
     d.prk++;
     if (d.prk < 2) { d.turn = 0; beginPrikupTrick(); }
-    else if (d.turn < 0) d.turn = 0; // взятку взял сдающий — ходит игрок после него
+    else d.turn = 0; // третью взятку всегда начинает игрок после сдающего
   }
   if (d.act.every((s) => d.hands[s].length === 0)) finishDeal();
 }
