@@ -28,7 +28,7 @@ h2{font:700 24px/1.1 var(--hand);margin:0 0 8px}
 .opp{min-width:0;flex:1}
 .seat{display:flex;align-items:center;gap:8px;font-weight:500;font-size:14px;flex-wrap:wrap}
 .seat .tag{font:600 11px var(--ui);background:rgba(0,0,0,.35);padding:2px 7px;border-radius:999px}
-.seat .tag.gold{background:var(--gold);color:#1F2430}
+.seat .tag.gold{background:var(--gold);color:#1F2430;font-size:22px;line-height:1.1;padding:3px 10px}
 .call{display:inline-flex;flex-wrap:wrap;gap:4px 6px;align-items:center;margin-top:6px;background:#F3F1E8;color:#1F2430;border-radius:10px;padding:4px 10px;font:600 13px var(--ui);position:relative;max-width:100%}
 .call::before{content:"";position:absolute;top:-5px;left:14px;border:5px solid transparent;border-top:0;border-bottom-color:#F3F1E8}
 .call .w{font-weight:700;color:#8A6200}.call .w.yes{color:#1E6B4A}
@@ -811,7 +811,7 @@ function draw() {
     const w = d.whist || {}, defs = d.defs || [];
     const whistTurn = d.phase === "whist" && s === (w.first === null ? defs[0] : w.second === null ? defs[1] : defs[0]);
     const parts = [];
-    if (c.bids.length) parts.push(c.bids.map((x, i) => i === c.bids.length - 1 ? `<b>${esc(x)}</b>` : `<span class="muted">${esc(x)}</span>`).join(" → "));
+    if (c.bids.length && !d.contract) parts.push(c.bids.map((x, i) => i === c.bids.length - 1 ? `<b>${esc(x)}</b>` : `<span class="muted">${esc(x)}</span>`).join(" → "));
     if (c.w) parts.push(`<span class="w ${/вист/.test(c.w) ? "yes" : ""}">${esc(c.w)}</span>`);
     if (bidTurn || whistTurn) parts.push('<span class="muted">думает…</span>');
     if (!parts.length) return d.phase === "bid" ? '<div class="call"><span class="muted">ждёт хода</span></div>' : "";
