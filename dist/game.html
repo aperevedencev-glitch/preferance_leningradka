@@ -35,7 +35,8 @@ h2{font:700 24px/1.1 var(--hand);margin:0 0 8px}
 .opp{min-width:0;flex:1}
 .seat{display:flex;align-items:center;gap:8px;font-weight:500;font-size:14px;flex-wrap:wrap}
 .seat .tag{font:600 11px var(--ui);background:rgba(0,0,0,.35);padding:2px 7px;border-radius:999px}
-.seat .tag.gold{background:var(--gold);color:#1F2430;font-size:22px;line-height:1.1;padding:3px 10px}
+.seat .tag.gold{background:#fff;color:#16181D;font-size:33px;line-height:1.1;padding:3px 12px;box-shadow:0 1px 3px rgba(0,0,0,.4)}
+.seat .tag.gold.red{color:#CE1B2E}
 .call{display:inline-flex;flex-wrap:wrap;gap:4px 6px;align-items:center;margin-top:6px;background:#F3F1E8;color:#1F2430;border-radius:10px;padding:4px 10px;font:600 13px var(--ui);position:relative;max-width:100%}
 .call::before{content:"";position:absolute;top:-5px;left:14px;border:5px solid transparent;border-top:0;border-bottom-color:#F3F1E8}
 .call .w{font-weight:700;color:#8A6200;font-size:26px;line-height:1.1}
@@ -1312,7 +1313,7 @@ function draw() {
   };
   const oppHTML = (s) => {
     const inDeal = d.act.includes(s);
-    const tags = [s === d.dealer ? '<span class="tag">сдаёт</span>' : "", s === d.declarer ? `<span class="tag gold">${esc(d.contract || d.bid.current || "")}</span>` : "",
+    const tags = [s === d.dealer ? '<span class="tag">сдаёт</span>' : "", s === d.declarer ? gameTag(d) : "",
       d.whisters && d.whisters.includes(s) ? '<span class="tag whist">вист</span>' : "", inDeal && d.phase === "play" || showAll ? `<span class="tag">взяток: ${d.tricks[s]}</span>` : ""].join("");
     const openHand = d.open && d.phase === "play" && s === d.passer;
     const cards = !inDeal ? '<span class="sub" style="color:#cfe">не играет</span>' : openHand ? `<div class="hand" style="justify-content:flex-start;${handCols(d.hands[s].length)}">${d.hands[s].map((c) => cardHTML(c, okIds.includes(c.id) ? "ok" : controllerOf(d.act[d.turn]) === me && d.act[d.turn] === s ? "dim" : "", `data-id="${c.id}" ${okIds.includes(c.id) ? 'role="button" tabindex="0"' : ""}`)).join("")}</div>` : showAll && d.hands[s].length ? `<div class="hand" style="justify-content:flex-start;${handCols(d.hands[s].length)}">${d.hands[s].map((c) => cardHTML(c)).join("")}</div>` : `<div class="backs">${d.hands[s].map(() => '<div class="back"></div>').join("")}</div>`;
@@ -1333,7 +1334,7 @@ function draw() {
         <div class="status" aria-live="polite">${statusText()}</div>
         ${d.showPrikup ? `<div class="prikup">${d.prikup.map((c) => cardHTML(c)).join("")}</div>` : d.phase === "bid" ? '<div class="prikup"><div class="back"></div><div class="back"></div></div>' : `<div class="trick">${trickSlots}</div>`}
       </div>
-      <div class="me"><div class="seat">${esc(nm(me))} ${me === d.dealer ? '<span class="tag">сдаёт</span>' : ""} ${me === d.declarer ? `<span class="tag gold">${esc(d.contract || d.bid.current || "")}</span>` : ""} ${d.whisters && d.whisters.includes(me) ? '<span class="tag whist">вист</span>' : ""} ${inDealMe && (d.phase === "play" || showAll) ? `<span class="tag">взяток: ${d.tricks[me]}</span>` : ""}</div>${callHTML(me)}<div class="hand" style="margin-top:8px;${inDealMe ? handCols(d.hands[me].length) : "display:flex"}">${myHand}</div></div>
+      <div class="me"><div class="seat">${esc(nm(me))} ${me === d.dealer ? '<span class="tag">сдаёт</span>' : ""} ${me === d.declarer ? gameTag(d) : ""} ${d.whisters && d.whisters.includes(me) ? '<span class="tag whist">вист</span>' : ""} ${inDealMe && (d.phase === "play" || showAll) ? `<span class="tag">взяток: ${d.tricks[me]}</span>` : ""}</div>${callHTML(me)}<div class="hand" style="margin-top:8px;${inDealMe ? handCols(d.hands[me].length) : "display:flex"}">${myHand}</div></div>
     </div>
     <div>
       <div class="panel" id="controls">${controls()}</div>
@@ -1346,6 +1347,12 @@ function draw() {
     const act = () => onCard(el.dataset.id);
     el.onclick = act; el.onkeydown = (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); act(); } };
   });
+}
+
+// метка игры: цветом масти на белом
+function gameTag(d) {
+  const g = d.contract || d.bid.current || "";
+  return `<span class="tag gold ${/[♦♥]/.test(g) ? "red" : ""}">${esc(g)}</span>`;
 }
 
 function statusText() {
