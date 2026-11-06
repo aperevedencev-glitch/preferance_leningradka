@@ -9,54 +9,55 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Golos+Text:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Golos+Text:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap">
 <style>
-/* Layout: бумажный лист пульки в клетку — слева запись раздачи, справа лист с пулей/горой/вистами, ниже история и рейтинг */
+/* Layout: те же цвета и шрифты, что в «Ленинградке за столом»: слева запись раздачи, справа игроки на сукне, ниже история и рейтинг */
 :root{
-  --bg:#E9E6DC; --paper:#FBFAF5; --grid:#DCE3EA; --ink:#1F2A44; --muted:#5D6675;
-  --pool:#1D4ED8; --gora:#B42318; --whist:#1F7A5A; --line:#C9CED6; --chip:#EEF1F5;
-  --hand:"Caveat", "Comic Sans MS", cursive; --ui:"Golos Text", system-ui, sans-serif; --mono:"JetBrains Mono", ui-monospace, monospace;
+  --felt:#17694A; --felt2:#0D4530; --rim:#B8902F; --paper:#FBF8EC; --grid:#E8E3C8; --ink:#12301F; --muted:#4F6358;
+  --btn:#14523B; --btnInk:#F6E3A1; --gold:#E2B44C; --on-felt:#F3F1E8;
+  --pool:#1D4ED8; --gora:#B42318; --whist:#1F7A5A; --line:#D8D2B4; --chip:#EEF0DF; --bg:#E3EADB;
+  --hand:"Caveat", cursive; --ui:"Golos Text", system-ui, sans-serif; --mono:"JetBrains Mono", ui-monospace, monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#12161C;--paper:#1A2028;--grid:#232B35;--ink:#E5E7EB;--muted:#9AA3AF;--pool:#7AA2FF;--gora:#FF8A80;--whist:#5FD3A5;--line:#2E3743;--chip:#222A34;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#12161C;--paper:#1A2028;--grid:#232B35;--ink:#E5E7EB;--muted:#9AA3AF;--pool:#7AA2FF;--gora:#FF8A80;--whist:#5FD3A5;--line:#2E3743;--chip:#222A34;color-scheme:dark}
+  --bg:#0A1A13;--paper:#12261C;--grid:#1A3226;--ink:#EDE8D2;--muted:#A9B8A4;--line:#2F4A39;--chip:#1A3226;--felt:#135C41;--felt2:#0A3A28;--btn:#E2B44C;--btnInk:#12301F;--pool:#7AA2FF;--gora:#FF8A80;--whist:#6FDDAE;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#0A1A13;--paper:#12261C;--grid:#1A3226;--ink:#EDE8D2;--muted:#A9B8A4;--line:#2F4A39;--chip:#1A3226;--felt:#135C41;--felt2:#0A3A28;--btn:#E2B44C;--btnInk:#12301F;--pool:#7AA2FF;--gora:#FF8A80;--whist:#6FDDAE;color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font:15px/1.45 var(--ui);margin:0}
-.wrap{max-width:1180px;margin:0 auto;padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1240px;margin:0 auto;padding-block:16px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 header{display:flex;flex-wrap:wrap;gap:8px 20px;align-items:baseline;justify-content:space-between;margin-bottom:16px}
-h1{font:700 40px/1 var(--hand);margin:0}
-h2{font:700 26px/1.1 var(--hand);margin:0 0 10px}
-.sub{color:var(--muted);font-size:13.5px}
+h1{font:700 38px/1 var(--hand);margin:0;color:var(--btn)}
+h2{font:700 24px/1.1 var(--hand);margin:0 0 8px}
+.sub{color:var(--muted);font-size:13px}
 .tabs{display:flex;gap:6px;flex-wrap:wrap}
 .tabs button,.seg button{font:500 13.5px var(--ui);border:1px solid var(--line);background:transparent;color:var(--ink);padding:7px 12px;border-radius:999px;cursor:pointer}
-.tabs button[aria-pressed="true"],.seg button[aria-pressed="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.tabs button[aria-pressed="true"],.seg button[aria-pressed="true"]{background:var(--btn);color:var(--btnInk);border-color:var(--btn)}
 .seg button:disabled{opacity:.35;cursor:not-allowed}
 .grid{display:grid;grid-template-columns:minmax(0,380px) minmax(0,1fr);gap:18px;align-items:start}
 @media (max-width:860px){.grid{grid-template-columns:1fr}}
-.sheet{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:16px;
-  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:22px 22px;min-width:0}
-.box{background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:16px;min-width:0}
+.sheet{background:radial-gradient(ellipse at center,var(--felt),var(--felt2));border:3px solid var(--rim);border-radius:16px;padding:16px;min-width:0;color:var(--on-felt);box-shadow:0 8px 22px rgba(8,20,14,.35)}
+.sheet>.sub{color:var(--on-felt);opacity:.85}
+.box{background:var(--paper);border:1px solid var(--line);border-radius:8px;padding:16px;min-width:0}
 label.f{display:flex;flex-direction:column;gap:4px;font-size:12.5px;color:var(--muted);margin-bottom:10px}
 select,input{font:15px var(--ui);color:var(--ink);background:var(--paper);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%}
 input[type=number]{font-family:var(--mono)}
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .seg{display:flex;gap:6px;flex-wrap:wrap;margin:4px 0 10px}
 .who{font-weight:500;font-size:14px;margin:8px 0 2px}
-.btn{font:600 14.5px var(--ui);background:var(--ink);color:var(--paper);border:0;border-radius:6px;padding:10px 14px;cursor:pointer;width:100%}
+.btn{font:600 14px var(--ui);background:var(--btn);color:var(--btnInk);border:0;border-radius:6px;padding:10px 14px;cursor:pointer;width:100%}
 .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line);width:auto}
 .btn:disabled{opacity:.4;cursor:not-allowed}
 .preview{font:13px var(--mono);color:var(--muted);background:var(--chip);border-radius:6px;padding:8px 10px;margin:10px 0;white-space:pre-wrap;min-height:2.6em}
 .err{color:var(--gora)}
 .players{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
-.pl{background:var(--paper);border:1.5px solid var(--ink);border-radius:4px;padding:12px;position:relative}
-.pl.dealer::after{content:"сдаёт";position:absolute;top:-10px;right:10px;background:var(--ink);color:var(--paper);font:600 11px var(--ui);padding:2px 8px;border-radius:999px}
+.pl{background:var(--paper);color:var(--ink);border:1.5px solid var(--gold);border-radius:8px;padding:12px;position:relative}
+.pl.dealer::after{content:"сдаёт";position:absolute;top:-10px;right:10px;background:var(--btn);color:var(--btnInk);font:600 11px var(--ui);padding:2px 8px;border-radius:999px}
 .pl h3{font:700 28px/1 var(--hand);margin:0 0 8px;overflow-wrap:anywhere}
 .kv{display:flex;justify-content:space-between;align-items:baseline;gap:8px;border-top:1px dashed var(--line);padding:6px 0}
 .kv span{font-size:12.5px;color:var(--muted)}
 .kv b{font:700 30px/1 var(--hand);font-variant-numeric:tabular-nums}
 .kv b.pool{color:var(--pool)} .kv b.gora{color:var(--gora)}
 .bar{height:6px;background:var(--chip);border-radius:3px;overflow:hidden;margin:2px 0 6px}
-.bar i{display:block;height:100%;background:var(--pool);border-radius:3px}
+.bar i{display:block;height:100%;background:var(--gold);border-radius:3px}
 .wl{font:13px var(--mono);color:var(--whist)}
 .total{font:600 14px var(--mono)}
 .total.pos{color:var(--whist)} .total.neg{color:var(--gora)}
@@ -71,7 +72,7 @@ td.n,th.n{text-align:right;font-family:var(--mono);font-variant-numeric:tabular-
 details summary{cursor:pointer;color:var(--muted);font-size:13.5px;margin-top:6px}
 .rules{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin-top:10px}
 .sec{margin-top:18px}
-:focus-visible{outline:2px solid var(--pool);outline-offset:2px}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 .rr{padding-left:22px;margin:8px 0 12px}.rr li{margin:6px 0;max-width:72ch}.rt td,.rt th{white-space:normal}.rr+h3,.rt+h3{font-size:15px;margin:14px 0 6px}
 </style>
@@ -197,7 +198,7 @@ const PREF = (() => {
     if (h.type === "misere") {
       const t = h.tricks;
       if (t === 0) { d.pool[h.declarer] += R.misere; d.notes.push(`${name(h.declarer)}: мизер сыгран → пуля +${R.misere}`); }
-      else { d.gora[h.declarer] += t * R.misereGoraPerTrick; d.notes.push(`${name(h.declarer)}: мизер, ${t} взят. → гора +${t * R.misereGoraPerTrick}`); }
+      else { d.keepRaspas = true; d.gora[h.declarer] += t * R.misereGoraPerTrick; d.notes.push(`${name(h.declarer)}: мизер, ${t} взят. → гора +${t * R.misereGoraPerTrick}`); }
       return d;
     }
 
@@ -240,6 +241,7 @@ const PREF = (() => {
     if (made) { d.pool[decl] += cost; d.notes.push(`${name(decl)}: ${h.contract} сыграна → пуля +${cost}`); }
     else {
       const short = lvl - dt;
+      d.keepRaspas = true; // несыгранная игра не прерывает серию распасов
       d.gora[decl] += short * cost * R.goraMult;
       d.notes.push(`${name(decl)}: недобор ${short} → гора +${short * cost * R.goraMult}`);
       // консоляция обоим защитникам
@@ -281,7 +283,7 @@ const PREF = (() => {
       pl.pool += d.pool[i]; pl.gora += d.gora[i];
       pl.whists = pl.whists.map((v, j) => v + d.whists[i][j]);
     });
-    p.raspasStep = h.type === "raspas" ? d.raspasStep : 0;
+    p.raspasStep = h.type === "raspas" ? d.raspasStep : d.keepRaspas ? p.raspasStep : 0;
     p.dealer = (p.dealer + 1) % p.players.length;
     p.hands.push({ h, d, before, at: Date.now() });
     if (isFinished(p)) p.closed = true;
@@ -370,7 +372,7 @@ const PREF = (() => {
 </ol>
 <div class="tw rt"><table><thead><tr><th>Ситуация</th><th class="n">Гора за взятку</th><th class="n">Следующая игра не ниже</th></tr></thead><tbody>${exRows.join("")}</tbody></table></div>
 <ol class="rr" start="7">
-  <li><b>Сброс счёта.</b> После сыгранной игры или мизера счёт распасов обнуляется. После ${ord[cyc - 1] || cyc + "-х"} распасов подряд выход автоматический — обычная торговля с 6-й, а если и эта сдача уйдёт в распасы, они снова считаются первыми.</li>
+  <li><b>Сброс счёта.</b> После сыгранной игры или мизера счёт распасов обнуляется. Несыгранная игра или мизер (недобор, взятка на мизере) серию не прерывает: счёт распасов и выход остаются прежними. После ${ord[cyc - 1] || cyc + "-х"} распасов подряд выход автоматический — обычная торговля с 6-й, а если и эта сдача уйдёт в распасы, они снова считаются первыми.</li>
   <li><b>Мизер</b> можно заявить при любом выходе: по старшинству он выше любой 8-й игры.</li>
   <li>Если при выходе все снова спасуют — снова распасы, и счёт распасов подряд продолжается.</li>
 </ol>

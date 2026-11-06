@@ -105,7 +105,7 @@ const PREF = (() => {
     if (h.type === "misere") {
       const t = h.tricks;
       if (t === 0) { d.pool[h.declarer] += R.misere; d.notes.push(`${name(h.declarer)}: мизер сыгран → пуля +${R.misere}`); }
-      else { d.gora[h.declarer] += t * R.misereGoraPerTrick; d.notes.push(`${name(h.declarer)}: мизер, ${t} взят. → гора +${t * R.misereGoraPerTrick}`); }
+      else { d.keepRaspas = true; d.gora[h.declarer] += t * R.misereGoraPerTrick; d.notes.push(`${name(h.declarer)}: мизер, ${t} взят. → гора +${t * R.misereGoraPerTrick}`); }
       return d;
     }
 
@@ -148,6 +148,7 @@ const PREF = (() => {
     if (made) { d.pool[decl] += cost; d.notes.push(`${name(decl)}: ${h.contract} сыграна → пуля +${cost}`); }
     else {
       const short = lvl - dt;
+      d.keepRaspas = true; // несыгранная игра не прерывает серию распасов
       d.gora[decl] += short * cost * R.goraMult;
       d.notes.push(`${name(decl)}: недобор ${short} → гора +${short * cost * R.goraMult}`);
       // консоляция обоим защитникам
@@ -189,7 +190,7 @@ const PREF = (() => {
       pl.pool += d.pool[i]; pl.gora += d.gora[i];
       pl.whists = pl.whists.map((v, j) => v + d.whists[i][j]);
     });
-    p.raspasStep = h.type === "raspas" ? d.raspasStep : 0;
+    p.raspasStep = h.type === "raspas" ? d.raspasStep : d.keepRaspas ? p.raspasStep : 0;
     p.dealer = (p.dealer + 1) % p.players.length;
     p.hands.push({ h, d, before, at: Date.now() });
     if (isFinished(p)) p.closed = true;
@@ -278,7 +279,7 @@ const PREF = (() => {
 </ol>
 <div class="tw rt"><table><thead><tr><th>Ситуация</th><th class="n">Гора за взятку</th><th class="n">Следующая игра не ниже</th></tr></thead><tbody>${exRows.join("")}</tbody></table></div>
 <ol class="rr" start="7">
-  <li><b>Сброс счёта.</b> После сыгранной игры или мизера счёт распасов обнуляется. После ${ord[cyc - 1] || cyc + "-х"} распасов подряд выход автоматический — обычная торговля с 6-й, а если и эта сдача уйдёт в распасы, они снова считаются первыми.</li>
+  <li><b>Сброс счёта.</b> После сыгранной игры или мизера счёт распасов обнуляется. Несыгранная игра или мизер (недобор, взятка на мизере) серию не прерывает: счёт распасов и выход остаются прежними. После ${ord[cyc - 1] || cyc + "-х"} распасов подряд выход автоматический — обычная торговля с 6-й, а если и эта сдача уйдёт в распасы, они снова считаются первыми.</li>
   <li><b>Мизер</b> можно заявить при любом выходе: по старшинству он выше любой 8-й игры.</li>
   <li>Если при выходе все снова спасуют — снова распасы, и счёт распасов подряд продолжается.</li>
 </ol>

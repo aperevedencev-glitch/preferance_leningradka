@@ -33,7 +33,7 @@ h2{font:700 24px/1.1 var(--hand);margin:0 0 8px}
 .call{display:inline-flex;flex-wrap:wrap;gap:4px 6px;align-items:center;margin-top:6px;background:#F3F1E8;color:#1F2430;border-radius:10px;padding:4px 10px;font:600 13px var(--ui);position:relative;max-width:100%}
 .call::before{content:"";position:absolute;top:-5px;left:14px;border:5px solid transparent;border-top:0;border-bottom-color:#F3F1E8}
 .call .w{font-weight:700;color:#8A6200;font-size:26px;line-height:1.1}
-.seat .tag.whist{font-size:22px;line-height:1.1;padding:3px 10px}.call .w.yes{color:#1E6B4A}
+.call .w{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 6px;min-width:0}.call .w small{font:600 12px/1.2 var(--ui);white-space:nowrap}.seat .tag.whist{font-size:22px;line-height:1.1;padding:3px 10px}.call .w.yes{color:#1E6B4A}
 .call.now{outline:2px solid var(--gold)}
 .call .muted{font-weight:500;opacity:.65}
 .me .call{align-self:center}
@@ -280,6 +280,12 @@ function chooseMode(open) {
 }
 // кто выбирает карту за этого игрока
 const controllerOf = (seat) => { const d = G.d; return d.open && seat === d.passer ? d.whisterSeat : seat; };
+// чьи карты лежат на столе в открытую: пасующий при висте в открытую; на мизере — оба ловящих
+function openSeats(d) {
+  if (d.phase !== "play" || d.raspas) return [];
+  if (d.contract === "мизер") return d.act.filter((s) => s !== d.declarer);
+  return d.open ? [d.passer] : [];
+}
 
 /* ---------- распасы и розыгрыш ---------- */
 function startRaspas() {
@@ -292,6 +298,7 @@ function startPlay() {
   const d = G.d;
   d.phase = "play"; d.trick = []; d.turn = G.d.act.indexOf(d.lead);
   d.trump = d.raspas || d.contract === "мизер" ? null : PREF.trumpOf(d.contract);
+  if (d.contract === "мизер") addLog("Мизер: ловящие кладут карты на стол в открытую");
   if (d.raspas) {
     // распасы: первые две взятки — «из прикупа», первым бьёт игрок после сдающего
     d.prk = 0; d.turn = 0;
@@ -426,7 +433,7 @@ const AI = (() => {
   function sampleWorld(d, seat) {
     const known = [...d.hands[seat], ...d.seen.map((x) => x.card)];
     const fixed = {};
-    if (d.open) { fixed[d.passer] = d.hands[d.passer]; known.push(...d.hands[d.passer]); }
+    for (const s of openSeats(d)) { fixed[s] = d.hands[s]; known.push(...d.hands[s]); }
     const others = d.act.filter((s) => s !== seat && !fixed[s]);
     const prikupKnown = !d.raspas && d.declarer != null;
     const toDeclarer = [];
@@ -814,7 +821,7 @@ function draw() {
     const whistTurn = d.phase === "whist" && s === (w.first === null ? defs[0] : w.second === null ? defs[1] : defs[0]);
     const parts = [];
     if (c.bids.length && !d.contract) parts.push(c.bids.map((x, i) => i === c.bids.length - 1 ? `<b>${esc(x)}</b>` : `<span class="muted">${esc(x)}</span>`).join(" → "));
-    if (c.w) parts.push(`<span class="w ${/вист/.test(c.w) ? "yes" : ""}">${esc(c.w)}</span>`);
+    if (c.w) { const [say, mode] = c.w.split(" · "); parts.push(`<span class="w ${/вист/.test(c.w) ? "yes" : ""}">${esc(say)}${mode ? `<small>${esc(mode)}</small>` : ""}</span>`); }
     if (bidTurn || whistTurn) parts.push('<span class="muted">думает…</span>');
     if (!parts.length) return d.phase === "bid" ? '<div class="call"><span class="muted">ждёт хода</span></div>' : "";
     if (d.raspas && d.phase !== "bid") parts.push('<span class="muted">распасы</span>');
@@ -824,7 +831,7 @@ function draw() {
     const inDeal = d.act.includes(s);
     const tags = [s === d.dealer ? '<span class="tag">сдаёт</span>' : "", s === d.declarer ? gameTag(d) : "",
       d.whisters && d.whisters.includes(s) ? '<span class="tag whist">вист</span>' : "", inDeal && d.phase === "play" || showAll ? `<span class="tag">взяток: ${d.tricks[s]}</span>` : ""].join("");
-    const openHand = d.open && d.phase === "play" && s === d.passer;
+    const openHand = openSeats(d).includes(s);
     const cards = !inDeal ? '<span class="sub" style="color:#cfe">не играет</span>' : openHand ? `<div class="hand" style="justify-content:flex-start;${handCols(d.hands[s].length)}">${d.hands[s].map((c) => cardHTML(c, okIds.includes(c.id) ? "ok" : controllerOf(d.act[d.turn]) === me && d.act[d.turn] === s ? "dim" : "", `data-id="${c.id}" ${okIds.includes(c.id) ? 'role="button" tabindex="0"' : ""}`)).join("")}</div>` : showAll && d.hands[s].length ? `<div class="hand" style="justify-content:flex-start;${handCols(d.hands[s].length)}">${d.hands[s].map((c) => cardHTML(c)).join("")}</div>` : `<div class="backs">${d.hands[s].map(() => '<div class="back"></div>').join("")}</div>`;
     return `<div class="opp" data-seat="${s}"><div class="seat">${esc(nm(s))} ${tags}</div>${callHTML(s)}${cards}</div>`;
   };

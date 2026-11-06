@@ -69,3 +69,16 @@ const r={}; P.updateRatings(r,s); console.log(s, r); console.log('ok');
   A.ok(P4.forcedWhist(q.rules, '6♠') && !P4.forcedWhist(q.rules, '6♣'));
   console.log('stalingrad ok');
 }
+{ // несыгранная игра не прерывает серию распасов
+  const A = require('assert'), P5 = require('../src/engine.js');
+  const raspas = (q) => P5.apply(q, { type: 'raspas', tricks: { 0: 4, 1: 3, 2: 3 } });
+  const game = (q, tr, c = '8♣') => { P5.apply(q, { type: 'game', declarer: 1, contract: c, whist: { first: 'whist', second: 'pass' }, tricks: { 1: tr } }); };
+  let q = P5.newPulka(['А', 'Б', 'В']);
+  raspas(q); A.strictEqual(q.raspasStep, 1);
+  game(q, 6, '7♣'); A.strictEqual(q.raspasStep, 1);          // недобор — серия продолжается
+  A.strictEqual(P5.exitLevel(q), 7);
+  raspas(q); A.strictEqual(q.raspasStep, 2);
+  P5.apply(q, { type: 'misere', declarer: 1, tricks: 1 }); A.strictEqual(q.raspasStep, 2);
+  game(q, 8); A.strictEqual(q.raspasStep, 0);  // сыграна — серия закончилась
+  console.log('raspas series ok');
+}
